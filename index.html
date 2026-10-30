@@ -108,7 +108,8 @@ tr.top1 .rank { color: var(--even); }
 .delta { font-weight: 600; font-size: .9rem; }
 .delta.up { color: var(--win); } .delta.down { color: var(--loss); } .delta.flat { color: var(--muted); }
 .pill { display: inline-block; font: 600 .7rem var(--body); letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
-.pill.w { color: var(--win); } .pill.l { color: var(--loss); } .pill.m { color: var(--muted); }
+.pill.w { color: var(--win); } .pill.l { color: var(--loss); } .pill.m { color: var(--muted); } .pill.e { color: var(--even); }
+.meta .pill { font-size: .62rem; padding: 0 6px; margin-left: 4px; vertical-align: 1px; }
 
 /* spotlight (this week) */
 .spot { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -150,6 +151,12 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 .actions .btn.primary { flex: 1 1 180px; }
 .msg { min-height: 1.3em; font-size: .9rem; margin: 0; }
 .msg.err { color: var(--loss); } .msg.ok { color: var(--win); }
+.confirm { border: 2px solid var(--win); background: var(--win-soft); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.confirm .label { color: var(--win); }
+.confirm .cf-who { font-size: 1.1rem; overflow-wrap: anywhere; }
+.confirm .cf-who b { color: var(--win); }
+.confirm .cf-score { font: 800 2.6rem var(--display); line-height: 1; }
+.confirm .cf-warn { color: var(--even); font-size: .88rem; margin: 0; font-weight: 600; }
 .editing-tag { display: inline-flex; align-items: center; gap: 6px; font: 600 .72rem var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--even); }
 
 /* chips */
@@ -274,12 +281,11 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 
 <nav class="tabs" aria-label="Sections">
   <div class="wrap" role="tablist">
-    <button role="tab" data-tab="ladder" aria-selected="true">Ladder</button>
+    <button role="tab" data-tab="log" aria-selected="true" class="cta">+ Log<span class="hide-sm"> match</span></button>
+    <button role="tab" data-tab="ladder" aria-selected="false">Ladder</button>
     <button role="tab" data-tab="players" aria-selected="false">Players</button>
     <button role="tab" data-tab="matches" aria-selected="false">Matches</button>
     <button role="tab" data-tab="charts" aria-selected="false">Charts</button>
-    <span class="spacer"></span>
-    <button role="tab" data-tab="log" aria-selected="false" class="cta">+ Log<span class="hide-sm"> match</span></button>
   </div>
 </nav>
 
@@ -296,7 +302,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       <div class="block-head"><h2>Standings</h2><span class="hint">Tap a player for their profile</span></div>
       <div class="card flush" id="standings"></div>
       <details class="about"><summary>How ratings work</summary>
-        <p class="hint">Everyone starts at 1000. Beating a stronger side earns more than beating a weaker one, and a big win moves the rating more than a close one (21–10 counts about 40% more than 21–19). In doubles both partners gain or lose the same amount. “Week” is the change since Monday.</p>
+        <p class="hint">Everyone starts at 1000. Beating a stronger side earns more than beating a weaker one, and a big win moves the rating more than a close one (21–10 counts about 40% more than 21–19). Deuce games (22–20, 25–23, 30–29…) count as the closest possible result. In doubles both partners gain or lose the same amount. “Week” is the change since Monday.</p>
       </details>
     </div>
     <div class="block">
@@ -399,8 +405,10 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       </div>
       <p class="hint" id="scoreHint">Type the points or use − and +. The higher score wins.</p>
       <label class="f"><span class="label">Date</span><input type="date" id="mdate"></label>
-      <div class="actions">
+      <div class="confirm" id="confirmBox" hidden></div>
+      <div class="actions" id="logActions">
         <button class="btn primary" type="submit" id="saveMatch">Save match</button>
+        <button class="btn ghost" type="button" id="resetLog">Reset</button>
         <button class="btn ghost" type="button" id="cancelEdit" hidden>Cancel</button>
         <span id="delWrap" hidden>
           <button class="btn link-danger" type="button" id="delMatch">Delete match</button>
@@ -451,10 +459,14 @@ function smoothed(r) { return (r.w + 1) / (r.w + r.l + 2); }
 
 // Margin as a share of the winner's points, so it works for games to 11, 15 or 21.
 // 21-19 → ×0.82, 21-15 → ×0.96, 21-10 → ×1.14, 21-0 → ×1.5. Matches without a score count ×1.
+// A game that went to deuce (loser reached 20, e.g. 22–20, 25–23, 30–29) was as close as badminton gets,
+// so it always gets the minimum ×0.75, however long the deuce ran.
+function isDeuce(m) { return Number.isFinite(m.scoreA) && Number.isFinite(m.scoreB) && Math.min(m.scoreA, m.scoreB) >= 20; }
 function marginFactor(m) {
   if (!Number.isFinite(m.scoreA) || !Number.isFinite(m.scoreB)) return 1;
   const hi = Math.max(m.scoreA, m.scoreB), lo = Math.min(m.scoreA, m.scoreB);
   if (hi <= 0) return 1;
+  if (lo >= 20) return 0.75;
   return 0.75 + 0.75 * (hi - lo) / hi;
 }
 
@@ -848,7 +860,7 @@ function matchRow(m, pov, g) {
   return `<div class="mitem">
     <div class="who">${who}</div>
     <div class="act"><span class="sc num">${sc}</span>${edit}</div>
-    <div class="meta num">${fmtDate(m.date)} · ${m.a.length > 1 ? "Doubles" : "Singles"} · ${rating}</div>
+    <div class="meta num">${fmtDate(m.date)} · ${m.a.length > 1 ? "Doubles" : "Singles"} · ${rating}${isDeuce(m) ? ' <span class="pill e">Deuce</span>' : ""}</div>
   </div>`;
 }
 
@@ -888,7 +900,7 @@ function renderEditState() {
   // the match being edited was deleted elsewhere
   if (editingId && !matches.some(m => m.id === editingId)) stopEdit();
   const on = !!editingId;
-  $("#editTag").hidden = !on; $("#cancelEdit").hidden = !on; $("#delWrap").hidden = !on || !canWrite;
+  $("#editTag").hidden = !on; $("#cancelEdit").hidden = !on; $("#resetLog").hidden = on; $("#delWrap").hidden = !on || !canWrite;
   $("#logTitle").textContent = on ? "Edit match" : "Log a match";
   $("#saveMatch").textContent = on ? "Save changes" : "Save match";
   $("#delMatch").textContent = confirmDel ? "Tap again to delete" : "Delete match";
@@ -916,6 +928,7 @@ function startEdit(id) {
 }
 
 function stopEdit() {
+  hideConfirm();
   editingId = null; confirmDel = false;
   ["a1", "a2", "b1", "b2"].forEach(x => $("#" + x).value = "");
   $("#sA").value = ""; $("#sB").value = ""; $("#mdate").value = today();
@@ -990,17 +1003,16 @@ function drawWL() {
 }
 
 // ---------- routing: #ladder, #players, #player/<id>, #matches, #charts, #log ----------
-const TABS = ["ladder", "players", "matches", "charts", "log"];
+const TABS = ["log", "ladder", "players", "matches", "charts"];
 function go(hash) { if (location.hash.slice(1) === hash) route(); else location.hash = hash; }
 function route() {
   const h = location.hash.slice(1);
   profileId = null;
   if (h.startsWith("player/")) { tab = "players"; profileId = h.slice(7); }
-  else tab = TABS.includes(h) ? h : "ladder";
+  else tab = TABS.includes(h) ? h : "log";
   $$("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
   TABS.forEach(x => $("#tab-" + x).hidden = x !== tab);
   if (S) { renderProfile(); if (tab === "charts") requestAnimationFrame(() => { drawLine(); drawWL(); }); }
-  try { localStorage.setItem("rl-tab", tab); } catch (e) {}
 }
 window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
 $("nav.tabs").addEventListener("click", e => {
@@ -1051,7 +1063,61 @@ $("#logForm").addEventListener("submit", async e => {
   if (!canWrite) { msg.className = "msg err"; msg.textContent = "Enter the team PIN at the top of the page to save matches."; $("#pinInput").focus(); return; }
   const winner = sa > sb ? "a" : "b";
   const args = { p_played_on: $("#mdate").value || today(), p_team_a: a, p_team_b: b, p_score_a: sa, p_score_b: sb };
-  $("#saveMatch").disabled = true;
+  showConfirm({ a, b, sa, sb, winner, args });
+});
+
+// Badminton to 21: win by 2 from 20-all, capped at 30–29. Anything else gets a warning, not a block.
+function scoreCheck(hi, lo) {
+  if (hi === 21 && lo <= 19) return null;
+  if (lo >= 20 && hi <= 30 && (hi - lo === 2 || (hi === 30 && lo === 29))) return null;
+  if (hi < 21) return `Nobody reached 21. Save anyway if the game was shorter.`;
+  if (lo >= 20 || hi > 21) return `${hi}–${lo} isn't a normal finish. From 20-all the winner leads by 2 (22–20, 25–23), up to 30–29.`;
+  return `21–20 isn't a finish: at 20-all play goes on until someone leads by 2.`;
+}
+
+let pending = null;
+function showConfirm(p) {
+  pending = p;
+  const hi = Math.max(p.sa, p.sb), lo = Math.min(p.sa, p.sb);
+  const W = p.winner === "a" ? p.a : p.b, L = p.winner === "a" ? p.b : p.a;
+  const fake = { scoreA: p.sa, scoreB: p.sb };
+  let rate = "";
+  if (!editingId) {
+    // preview with today's ratings; a back-dated match is replayed in date order, so the final change can differ a little
+    const avg = ids => ids.reduce((t, id) => t + (S.elo[id] ?? START), 0) / ids.length;
+    const ra = avg(W), rl = avg(L);
+    const d = Math.round(K * marginFactor(fake) * (1 - expected(ra, rl)));
+    rate = `<p class="hint num">Rating: about <b class="delta up">+${d}</b> for ${W.length > 1 ? "each winner" : "the winner"}, <b class="delta down">−${d}</b> for ${L.length > 1 ? "each loser" : "the loser"}.</p>`;
+  }
+  const warn = scoreCheck(hi, lo);
+  const day = new Date(p.args.p_played_on + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  $("#confirmBox").innerHTML = `
+    <span class="label">${editingId ? "Check the changes" : "Check before saving"}</span>
+    <div class="cf-who"><b>${esc(teamName(W))}</b> ${W.length > 1 ? "win" : "wins"}</div>
+    <div class="cf-score num">${hi}–${lo}${lo >= 20 ? ' <span class="pill e" style="font-size:.8rem;vertical-align:middle">Deuce</span>' : ""}</div>
+    <div class="cf-who">against ${esc(teamName(L))}</div>
+    <p class="hint">${p.a.length > 1 ? "Doubles" : "Singles"} · ${day}</p>
+    ${warn ? `<p class="cf-warn">⚠ ${warn}</p>` : ""}
+    ${rate}
+    <div class="actions">
+      <button class="btn primary" type="button" id="confirmSave">${editingId ? "Confirm changes" : "Confirm & save"}</button>
+      <button class="btn ghost" type="button" id="confirmBack">Go back</button>
+    </div>`;
+  $("#confirmBox").hidden = false; $("#logActions").hidden = true;
+  $("#confirmSave").addEventListener("click", doSave);
+  $("#confirmBack").addEventListener("click", () => { hideConfirm(); $("#saveMatch").focus(); });
+  $("#confirmSave").focus();
+}
+function hideConfirm() { pending = null; $("#confirmBox").hidden = true; $("#confirmBox").innerHTML = ""; $("#logActions").hidden = false; }
+// changing anything in the form throws away the pending confirmation
+["input", "change"].forEach(ev => $("#logForm").addEventListener(ev, () => { if (pending) hideConfirm(); }));
+$("#logForm").addEventListener("click", e => { if (pending && e.target.closest("[data-step],#fmtSeg button")) hideConfirm(); });
+
+async function doSave() {
+  if (!pending) return;
+  const { a, b, sa, sb, winner, args } = pending;
+  const msg = $("#logMsg"); msg.className = "msg";
+  $("#confirmSave").disabled = true;
   try {
     if (editingId) {
       await rpc("update_match", { p_id: editingId, ...args });
@@ -1062,10 +1128,20 @@ $("#logForm").addEventListener("submit", async e => {
       msg.className = "msg ok"; msg.textContent = `Saved: ${teamName(winner === "a" ? a : b)} won ${Math.max(sa, sb)}–${Math.min(sa, sb)}.`;
       $("#sA").value = ""; $("#sB").value = ""; updateScoreUI();
     }
+    hideConfirm();
     reload();
-  } catch (err) { msg.className = "msg err"; msg.textContent = writeError(err); }
-  $("#saveMatch").disabled = players.length < 2;
-});
+  } catch (err) { hideConfirm(); msg.className = "msg err"; msg.textContent = writeError(err); }
+}
+
+function resetLog() {
+  hideConfirm();
+  ["a1", "a2", "b1", "b2"].forEach(x => $("#" + x).value = "");
+  $("#sA").value = ""; $("#sB").value = ""; $("#mdate").value = today();
+  $("#logMsg").textContent = "";
+  renderLogSelects(); updateScoreUI();
+  $("#a1").focus();
+}
+$("#resetLog").addEventListener("click", resetLog);
 
 $("#cancelEdit").addEventListener("click", () => { stopEdit(); $("#logMsg").textContent = ""; history.length > 1 ? history.back() : go("matches"); });
 $("#delMatch").addEventListener("click", async () => {
@@ -1178,7 +1254,8 @@ let resizeT; window.addEventListener("resize", () => { clearTimeout(resizeT); re
 
 // ---------- boot ----------
 $("#mdate").value = today();
-if (!location.hash) { let t = "ladder"; try { t = localStorage.getItem("rl-tab") || t; } catch (e) {} if (TABS.includes(t) && t !== "log") history.replaceState(null, "", "#" + t); }
+// the site opens on Log match; links to a tab or player (#ladder, #player/…) still go straight there
+if (!location.hash) history.replaceState(null, "", "#log");
 route();
 renderAll();
 $("#summary").textContent = "Loading results…";

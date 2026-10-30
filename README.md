@@ -37,7 +37,7 @@ npx netlify-cli deploy --prod --dir .
 Send the link and the PIN in your team chat. On phones, open the link and use **Add to Home Screen**.
 
 ## Day to day
-- **+ Log match**: pick players, enter the score, Save.
+- **+ Log match** (the page opens here): pick players, enter the score, tap **Save match**, check the summary (winner, score, rating change), then **Confirm & save**. **Reset** clears the form. Unusual scores such as 21–20 get a warning before saving.
 - **Matches**: every game grouped by week. Unlock, then **Edit** to fix players, score or date, or delete it.
 - **Players**: tap anyone for their profile: rating, streak, who they beat most, best partners and toughest opponents.
   **Performance** has three views: **Week** (split by day), **Month** and **Lifetime** (split by week). Each shows rating change, record, points and a trend (rising, steady or falling, from the slope of their rating over that period). Use ‹ › to step back through earlier weeks or months.
@@ -48,6 +48,6 @@ Send the link and the PIN in your team chat. On phones, open the link and use **
 Editing matches needs one new database function. In Supabase → **SQL Editor**, paste all of `supabase/schema.sql` again and **Run**. It keeps your data.
 
 ## Notes
-- Ratings start at 1000 and are recalculated from the full match history on every load. Bigger winning margins and upsets move ratings more.
+- Ratings are Elo-based: everyone starts at 1000 and ratings are recalculated from the full match history on every load. Bigger winning margins and upsets move ratings more. Deuce games (22–20, 25–23, 30–29) count as the closest possible result.
 - Supabase pauses free projects after about a week with no activity. Opening the site normally keeps it awake; if it does pause, click **Restore** in the Supabase dashboard.
 - Backup: Supabase → **Table Editor** → `matches` / `players` → **Export to CSV**.
