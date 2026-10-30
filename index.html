@@ -104,7 +104,7 @@ tr.top1 .rank { color: var(--even); }
 .avatar { --size: 28px; width: var(--size); height: var(--size); border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 calc(var(--size) * .4) var(--body); color: #fff; letter-spacing: .02em; }
 .form { display: inline-flex; gap: 3px; }
 .form i { width: 16px; height: 16px; border-radius: 4px; font: 700 .6rem var(--body); font-style: normal; display: grid; place-items: center; color: var(--surface); }
-.form i.w { background: var(--win); } .form i.l { background: var(--loss); }
+.form i.w { background: var(--win); } .form i.l { background: var(--loss); } .form i.d { background: var(--muted); }
 .delta { font-weight: 600; font-size: .9rem; }
 .delta.up { color: var(--win); } .delta.down { color: var(--loss); } .delta.flat { color: var(--muted); }
 .pill { display: inline-block; font: 600 .7rem var(--body); letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
@@ -181,7 +181,13 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 .mitem .meta { color: var(--muted); font-size: .8rem; grid-column: 1; }
 .mitem .act { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 8px; align-items: center; }
 .res { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font: 700 .7rem var(--body); color: #fff; margin-right: 8px; vertical-align: 1px; }
-.res.w { background: var(--win); } .res.l { background: var(--loss); }
+.res.w { background: var(--win); } .res.l { background: var(--loss); } .res.d { background: var(--muted); }
+.drawtoggle { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border: 1px dashed var(--line); border-radius: 12px; cursor: pointer; }
+.drawtoggle input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
+.drawtoggle:has(input:checked) { border-style: solid; border-color: var(--muted); background: var(--surface-2); }
+.drawtoggle b { font-weight: 600; }
+.confirm.draw { border-color: var(--muted); background: var(--surface-2); }
+.confirm.draw .label, .confirm.draw .cf-who b { color: var(--ink); }
 
 /* player cards */
 .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
@@ -302,7 +308,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       <div class="block-head"><h2>Standings</h2><span class="hint">Tap a player for their profile</span></div>
       <div class="card flush" id="standings"></div>
       <details class="about"><summary>How ratings work</summary>
-        <p class="hint">Everyone starts at 1000. Beating a stronger side earns more than beating a weaker one, and a big win moves the rating more than a close one (21–10 counts about 40% more than 21–19). Deuce games (22–20, 25–23, 30–29…) count as the closest possible result. In doubles both partners gain or lose the same amount. “Week” is the change since Monday.</p>
+        <p class="hint">Everyone starts at 1000. Beating a stronger side earns more than beating a weaker one, and a big win moves the rating more than a close one (21–10 counts about 40% more than 21–19). Deuce games (22–20, 25–23, 30–29…) count as the closest possible result. A game that didn't finish counts as a draw (half a win): it only moves points from the higher-rated side to the lower-rated one, and win % counts it as half. In doubles both partners gain or lose the same amount. “Week” is the change since Monday.</p>
       </details>
     </div>
     <div class="block">
@@ -404,6 +410,9 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
         </div>
       </div>
       <p class="hint" id="scoreHint">Type the points or use − and +. The higher score wins.</p>
+      <label class="drawtoggle"><input type="checkbox" id="drawn">
+        <span><b>Didn't finish: count as a draw</b><br><span class="hint">For games stopped early (out of time, injury…). Enter the score when you stopped, or leave it blank.</span></span>
+      </label>
       <label class="f"><span class="label">Date</span><input type="date" id="mdate"></label>
       <div class="confirm" id="confirmBox" hidden></div>
       <div class="actions" id="logActions">
@@ -453,9 +462,13 @@ function fmtDate(s) { const d = new Date(s + "T00:00:00"); return isNaN(d) ? s :
 function fmtRange(wk) { return `${fmtDate(wk)} – ${fmtDate(weekEnd(wk))}`; }
 function signed(n) { const r = Math.round(n); return r > 0 ? "+" + r : r < 0 ? "−" + Math.abs(r) : "±0"; }
 function deltaSpan(n) { const r = Math.round(n); return `<span class="delta num ${r > 0 ? "up" : r < 0 ? "down" : "flat"}">${signed(n)}</span>`; }
-function pct(w, l) { return w + l ? Math.round(100 * w / (w + l)) + "%" : "–"; }
+// Records are { w, l, d }; a draw counts as half a win in win %.
+function nGames(r) { return r.w + r.l + (r.d || 0); }
+function rec(r) { return `${r.w}–${r.l}${r.d ? `–${r.d}` : ""}`; }
+function pct(w, l, d = 0) { return w + l + d ? Math.round(100 * (w + d / 2) / (w + l + d)) + "%" : "–"; }
+function tally(r, res) { r[res] = (r[res] || 0) + 1; return r; }
 // Win rate pulled toward 50% so a 1–0 record doesn't outrank 8–2.
-function smoothed(r) { return (r.w + 1) / (r.w + r.l + 2); }
+function smoothed(r) { return (r.w + (r.d || 0) / 2 + 1) / (nGames(r) + 2); }
 
 // Margin as a share of the winner's points, so it works for games to 11, 15 or 21.
 // 21-19 → ×0.82, 21-15 → ×0.96, 21-10 → ×1.14, 21-0 → ×1.5. Matches without a score count ×1.
@@ -469,6 +482,9 @@ function marginFactor(m) {
   if (lo >= 20) return 0.75;
   return 0.75 + 0.75 * (hi - lo) / hi;
 }
+// An unfinished game counts as a draw (result ½). The score at the stop is ignored and it moves ratings
+// at the lowest weight, ×0.75: a draw only shifts points from the favourite to the underdog.
+const DRAW_FACTOR = 0.75;
 
 // ---------- stats: replay every match in date order ----------
 function compute() {
@@ -477,7 +493,7 @@ function compute() {
   const ensure = id => {
     if (id in elo) return;
     elo[id] = START; hist[id] = [{ x: 0, y: START }]; weeks[id] = {}; vs[id] = {}; mates[id] = {}; games[id] = [];
-    st[id] = { w: 0, l: 0, sw: 0, sl: 0, dw: 0, dl: 0, form: [], peak: START };
+    st[id] = { w: 0, l: 0, d: 0, singles: { w: 0, l: 0, d: 0 }, doubles: { w: 0, l: 0, d: 0 }, form: [], peak: START };
   };
   players.forEach(p => ensure(p.id));
   ordered.forEach((m, i) => {
@@ -485,31 +501,30 @@ function compute() {
     [...a, ...b].forEach(ensure);
     const ra = a.reduce((s, id) => s + elo[id], 0) / a.length;
     const rb = b.reduce((s, id) => s + elo[id], 0) / b.length;
-    const sa = m.winner === "a" ? 1 : 0;
-    const d = K * marginFactor(m) * (sa - expected(ra, rb));
+    const sa = m.drawn ? 0.5 : m.winner === "a" ? 1 : 0;
+    const d = K * (m.drawn ? DRAW_FACTOR : marginFactor(m)) * (sa - expected(ra, rb));
     m._delta = Math.round(Math.abs(d));
     m._week = weekOf(m.date);
     const dbl = a.length > 1;
-    for (const [team, opp, sign, won, pf, pa] of [[a, b, 1, sa === 1, m.scoreA, m.scoreB], [b, a, -1, sa === 0, m.scoreB, m.scoreA]]) {
+    const resA = m.drawn ? "d" : sa === 1 ? "w" : "l", resB = m.drawn ? "d" : sa === 0 ? "w" : "l";
+    for (const [team, opp, sign, res, pf, pa] of [[a, b, 1, resA, m.scoreA, m.scoreB], [b, a, -1, resB, m.scoreB, m.scoreA]]) {
       for (const id of team) {
-        const wk = weeks[id][m._week] = weeks[id][m._week] || { w: 0, l: 0, pf: 0, pa: 0, start: elo[id], end: elo[id] };
+        const wk = weeks[id][m._week] = weeks[id][m._week] || { w: 0, l: 0, d: 0, pf: 0, pa: 0, start: elo[id], end: elo[id] };
         elo[id] += sign * d;
         const s = st[id];
-        won ? s.w++ : s.l++;
-        if (dbl) won ? s.dw++ : s.dl++; else won ? s.sw++ : s.sl++;
-        s.form.push(won ? "w" : "l");
+        tally(s, res); tally(dbl ? s.doubles : s.singles, res);
+        s.form.push(res);
         s.peak = Math.max(s.peak, elo[id]);
-        won ? wk.w++ : wk.l++;
+        tally(wk, res);
         wk.pf += pf || 0; wk.pa += pa || 0; wk.end = elo[id];
         hist[id].push({ x: i + 1, y: elo[id], date: m.date });
-        games[id].push({ m, won, change: sign * d, after: elo[id] });
-        for (const o of opp) { const r = vs[id][o] = vs[id][o] || { w: 0, l: 0 }; won ? r.w++ : r.l++; }
-        for (const t of team) if (t !== id) { const r = mates[id][t] = mates[id][t] || { w: 0, l: 0 }; won ? r.w++ : r.l++; }
+        games[id].push({ m, res, won: res === "w", change: sign * d, after: elo[id] });
+        for (const o of opp) tally(vs[id][o] = vs[id][o] || { w: 0, l: 0, d: 0 }, res);
+        for (const t of team) if (t !== id) tally(mates[id][t] = mates[id][t] || { w: 0, l: 0, d: 0 }, res);
       }
       if (dbl && team.length === 2) {
         const k = pairKey(team[0], team[1]);
-        pairs[k] = pairs[k] || { ids: team.slice(), w: 0, l: 0 };
-        won ? pairs[k].w++ : pairs[k].l++;
+        tally(pairs[k] = pairs[k] || { ids: team.slice(), w: 0, l: 0, d: 0 }, res);
       }
     }
   });
@@ -560,7 +575,7 @@ function renderSpotlight() {
   const top = byGain[0], wins = byWins[0];
   el.innerHTML = `<div class="spot">
     <div class="card"><span class="lab">Top mover</span><span class="big">${deltaSpan(top.w.end - top.w.start)}</span>${playerLink(top.id, 22)}</div>
-    <div class="card"><span class="lab">Most wins</span><span class="big num">${wins.w.w}–${wins.w.l}</span>${playerLink(wins.id, 22)}</div>
+    <div class="card"><span class="lab">Most wins</span><span class="big num">${rec(wins.w)}</span>${playerLink(wins.id, 22)}</div>
     <div class="card"><span class="lab">Matches played</span><span class="big num">${played}</span><span class="hint">${rows.length} player${rows.length === 1 ? "" : "s"} on court</span></div>
   </div>`;
 }
@@ -575,12 +590,12 @@ function renderStandings() {
     <tbody>${S.ranked.map((id, i) => {
       const s = S.st[id], w = S.weeks[id][wk];
       const last = s.form.slice(-5).map(f => `<i class="${f}">${f.toUpperCase()}</i>`).join("");
-      return `<tr class="link ${i === 0 && s.w + s.l ? "top1" : ""}" data-player="${id}"><td class="rank">${i + 1}</td>
+      return `<tr class="link ${i === 0 && nGames(s) ? "top1" : ""}" data-player="${id}"><td class="rank">${i + 1}</td>
         <td>${playerLink(id)}</td>
         <td class="r rating">${Math.round(S.elo[id])}</td>
         <td class="r">${w ? deltaSpan(w.end - w.start) : '<span class="hint">–</span>'}</td>
-        <td class="r">${s.w}–${s.l}</td>
-        <td class="r hide-sm">${pct(s.w, s.l)}</td>
+        <td class="r">${rec(s)}</td>
+        <td class="r hide-sm">${pct(s.w, s.l, s.d)}</td>
         <td class="hide-sm"><span class="form">${last || '<span class="hint">no games</span>'}</span></td></tr>`;
     }).join("")}</tbody></table></div>`;
 }
@@ -588,10 +603,10 @@ function renderStandings() {
 function renderPairs() {
   const el = $("#pairs");
   const list = Object.values(S.pairs).filter(p => p.ids.every(id => players.some(x => x.id === id)))
-    .sort((x, y) => smoothed(y) - smoothed(x) || (y.w + y.l) - (x.w + x.l));
+    .sort((x, y) => smoothed(y) - smoothed(x) || (nGames(y)) - (nGames(x)));
   if (!list.length) { el.innerHTML = `<p class="hint" style="padding:12px 16px">Partnerships show up here after your first doubles match.</p>`; return; }
   el.innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>Pair</th><th class="r">W–L</th><th class="r">Win %</th></tr></thead><tbody>${
-    list.slice(0, 6).map(p => `<tr><td>${esc(teamName(p.ids))}</td><td class="r">${p.w}–${p.l}</td><td class="r">${pct(p.w, p.l)}</td></tr>`).join("")
+    list.slice(0, 6).map(p => `<tr><td>${esc(teamName(p.ids))}</td><td class="r">${rec(p)}</td><td class="r">${pct(p.w, p.l, p.d)}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
@@ -612,7 +627,7 @@ function renderRoster() {
   el.innerHTML = S.ranked.map((id, i) => {
     const s = S.st[id];
     return `<button type="button" class="card pcard" data-player="${id}">
-      <div class="top">${avatar(id, 38)}<div style="min-width:0"><div class="nm">${esc(pName(id))}</div><div class="rk num">#${i + 1} · ${s.w}–${s.l} · ${pct(s.w, s.l)}</div></div></div>
+      <div class="top">${avatar(id, 38)}<div style="min-width:0"><div class="nm">${esc(pName(id))}</div><div class="rk num">#${i + 1} · ${rec(s)} · ${pct(s.w, s.l, s.d)}</div></div></div>
       <div class="stats"><span class="rating num">${Math.round(S.elo[id])}</span>${sparkline(id)}</div>
     </button>`;
   }).join("");
@@ -622,12 +637,12 @@ function renderRoster() {
 function recordList(map, dir) {
   return Object.entries(map).filter(([id]) => players.some(p => p.id === id))
     .map(([id, r]) => ({ id, ...r, s: smoothed(r) }))
-    .sort((x, y) => dir * (y.s - x.s) || (y.w + y.l) - (x.w + x.l));
+    .sort((x, y) => dir * (y.s - x.s) || (nGames(y)) - (nGames(x)));
 }
 function muBlock(title, list, empty) {
   return `<div class="card mu"><h3>${title}</h3>${list.length ? list.slice(0, 3).map(r => `<div class="murow">
-      ${playerLink(r.id, 22)}<span class="rec num">${r.w}–${r.l} · ${pct(r.w, r.l)}</span>
-      <div class="bar" aria-hidden="true"><span style="width:${Math.round(100 * r.w / (r.w + r.l))}%"></span></div>
+      ${playerLink(r.id, 22)}<span class="rec num">${rec(r)} · ${pct(r.w, r.l, r.d)}</span>
+      <div class="bar" aria-hidden="true"><span style="width:${Math.round(100 * r.w / (nGames(r)))}%"></span></div>
     </div>`).join("") : `<p class="hint">${empty}</p>`}</div>`;
 }
 
@@ -637,7 +652,7 @@ function renderProfile() {
   $("#playersList").hidden = show; el.hidden = !show;
   if (!show) return;
   const id = profileId, s = S.st[id], rank = S.ranked.indexOf(id) + 1;
-  const g = s.w + s.l, sk = streak(s.form);
+  const g = nGames(s), sk = streak(s.form);
   const wk = S.weeks[id][weekOf(today())];
   const weekD = wk ? wk.end - wk.start : 0;
   const since = players.find(p => p.id === id).createdAt;
@@ -653,9 +668,9 @@ function renderProfile() {
         <p class="sub num">Rank #${rank} of ${players.length}${since ? ` · joined ${new Date(since).toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : ""}</p></div></div>
       <div class="tiles num">
         <div class="tile"><div class="lab">Rating</div><div class="val">${Math.round(S.elo[id])}</div></div>
-        <div class="tile"><div class="lab">This week</div><div class="val ${weekD > 0.5 ? "up" : weekD < -0.5 ? "down" : ""}">${wk ? signed(weekD) : "–"}${wk ? `<small>${wk.w}–${wk.l}</small>` : ""}</div></div>
-        <div class="tile"><div class="lab">Record</div><div class="val">${s.w}–${s.l}<small>${pct(s.w, s.l)}</small></div></div>
-        <div class="tile"><div class="lab">Streak</div><div class="val ${sk ? (sk.kind === "w" ? "up" : "down") : ""}">${sk ? sk.kind.toUpperCase() + sk.n : "–"}</div></div>
+        <div class="tile"><div class="lab">This week</div><div class="val ${weekD > 0.5 ? "up" : weekD < -0.5 ? "down" : ""}">${wk ? signed(weekD) : "–"}${wk ? `<small>${rec(wk)}</small>` : ""}</div></div>
+        <div class="tile"><div class="lab">Record</div><div class="val">${rec(s)}<small>${pct(s.w, s.l, s.d)}</small></div></div>
+        <div class="tile"><div class="lab">Streak</div><div class="val ${sk ? (sk.kind === "w" ? "up" : sk.kind === "l" ? "down" : "") : ""}">${sk ? sk.kind.toUpperCase() + sk.n : "–"}</div></div>
         <div class="tile"><div class="lab">Peak</div><div class="val">${Math.round(s.peak)}</div></div>
       </div>
     </div>
@@ -723,7 +738,7 @@ function periodRange(id, period, offset) {
 
 function periodStats(id, R) {
   const t = today(), idx = {};
-  const buckets = R.keys.map((k, i) => { idx[k] = i; return { k, w: 0, l: 0, pf: 0, pa: 0, d: 0 }; });
+  const buckets = R.keys.map((k, i) => { idx[k] = i; return { k, w: 0, l: 0, dr: 0, pf: 0, pa: 0, d: 0 }; });
   let start = START;
   for (const x of S.games[id]) {
     const date = x.m.date;
@@ -732,7 +747,7 @@ function periodStats(id, R) {
     const b = buckets[idx[R.keyOf(date)]];
     if (!b) continue;
     const onA = x.m.a.includes(id);
-    x.won ? b.w++ : b.l++;
+    x.res === "d" ? b.dr++ : tally(b, x.res);
     b.pf += (onA ? x.m.scoreA : x.m.scoreB) || 0; b.pa += (onA ? x.m.scoreB : x.m.scoreA) || 0;
     b.d += x.change;
   }
@@ -740,11 +755,13 @@ function periodStats(id, R) {
   let cum = 0;
   buckets.forEach(b => { b.future = b.k > t; cum += b.d; b.cum = cum; b.end = start + cum; });
   const live = buckets.filter(b => !b.future);
-  const tot = buckets.reduce((a, b) => ({ w: a.w + b.w, l: a.l + b.l, pf: a.pf + b.pf, pa: a.pa + b.pa }), { w: 0, l: 0, pf: 0, pa: 0 });
+  // buckets use d for rating change, so their draw count is dr; totals go back to the usual { w, l, d }
+  const tot = buckets.reduce((a, b) => ({ w: a.w + b.w, l: a.l + b.l, d: a.d + b.dr, pf: a.pf + b.pf, pa: a.pa + b.pa }), { w: 0, l: 0, d: 0, pf: 0, pa: 0 });
+  buckets.forEach(b => b.rec = { w: b.w, l: b.l, d: b.dr });
   // the trend starts at the bucket of the player's first ever game, so empty weeks before they joined don't flatter it
   const first = S.games[id].length ? R.keyOf(S.games[id][0].m.date < R.from ? R.from : S.games[id][0].m.date) : null;
   const from = first ? Math.max(0, live.findIndex(b => b.k >= first)) : 0;
-  return { buckets, live, start, net: cum, ...tot, trend: trendOf(live, from, R.unit, tot.w + tot.l) };
+  return { buckets, live, start, net: cum, ...tot, trend: trendOf(live, from, R.unit, nGames(tot)) };
 }
 
 // Least-squares slope of the running rating total (starting from 0), in rating points per day or per week.
@@ -781,13 +798,14 @@ function drawPeriod(id) {
   const T = P.trend;
   const trendTxt = T.kind === "none" ? `<span class="pill m">${T.why}</span>`
     : `<span class="pill ${T.kind === "up" ? "w" : T.kind === "down" ? "l" : "m"}">${T.kind === "up" ? "▲ Rising" : T.kind === "down" ? "▼ Falling" : "■ Steady"}</span> <span class="hint num">${signed(T.slope)}/${per}</span>`;
-  const g = P.w + P.l, pg = prev ? prev.w + prev.l : 0;
-  const wrDiff = g && pg ? Math.round(100 * P.w / g) - Math.round(100 * prev.w / pg) : null;
+  const g = nGames(P), pg = prev ? nGames(prev) : 0;
+  const pts = r => Math.round(100 * (r.w + r.d / 2) / nGames(r));
+  const wrDiff = g && pg ? pts(P) - pts(prev) : null;
   const unitName = profPeriod === "week" ? "week" : profPeriod === "month" ? "month" : "";
   $("#trendRow").innerHTML = `
     <div class="card stat"><span class="lab">Trend</span><span>${trendTxt}</span></div>
     <div class="card stat"><span class="lab">Rating change</span><span class="big">${g ? deltaSpan(P.net) : "–"}</span><span class="hint num">${Math.round(P.start)} → ${Math.round(P.start + P.net)}</span></div>
-    <div class="card stat"><span class="lab">Record</span><span class="big num">${P.w}–${P.l}</span><span class="hint num">${pct(P.w, P.l)} won${wrDiff !== null ? ` · <span class="delta ${wrDiff > 0 ? "up" : wrDiff < 0 ? "down" : "flat"}">${wrDiff > 0 ? "▲" : wrDiff < 0 ? "▼" : ""}${Math.abs(wrDiff)} pts</span> vs last ${unitName}` : ""}</span></div>
+    <div class="card stat"><span class="lab">Record</span><span class="big num">${rec(P)}</span><span class="hint num">${pct(P.w, P.l, P.d)} won${wrDiff !== null ? ` · <span class="delta ${wrDiff > 0 ? "up" : wrDiff < 0 ? "down" : "flat"}">${wrDiff > 0 ? "▲" : wrDiff < 0 ? "▼" : ""}${Math.abs(wrDiff)} pts</span> vs last ${unitName}` : ""}</span></div>
     <div class="card stat"><span class="lab">Points ±</span><span class="big num">${g ? signed(P.pf - P.pa) : "–"}</span><span class="hint num">${g ? `${(P.pf / g).toFixed(1)} for · ${(P.pa / g).toFixed(1)} against per game` : "no games"}</span></div>`;
 
   if (!g) {
@@ -813,14 +831,14 @@ function drawPeriod(id) {
     const every = Math.ceil(B.length / Math.max(1, Math.floor((W - m.l) / 52)));
     const showVals = bw >= 28;
     B.forEach((b, i) => {
-      const cx = sx(i + 1), yz = sy(0), yv = sy(b.d), up = b.d >= 0, n = b.w + b.l;
+      const cx = sx(i + 1), yz = sy(0), yv = sy(b.d), up = b.d >= 0, n = nGames(b.rec);
       if (b.future) s += `<rect x="${m.l + bw * i}" y="${m.t}" width="${bw}" height="${H - m.t - m.b}" fill="var(--surface-2)"/>`;
       if (n) {
-        s += `<rect x="${cx - barW / 2}" y="${Math.min(yz, yv)}" width="${barW}" height="${Math.max(1.5, Math.abs(yv - yz))}" rx="3" fill="var(${up ? "--win" : "--loss"})" opacity=".85"><title>${R.unit === "day" ? fmtDate(b.k) : "Week of " + fmtDate(b.k)}: ${signed(b.d)} rating, ${b.w}–${b.l}</title></rect>`;
+        s += `<rect x="${cx - barW / 2}" y="${Math.min(yz, yv)}" width="${barW}" height="${Math.max(1.5, Math.abs(yv - yz))}" rx="3" fill="var(${up ? "--win" : "--loss"})" opacity=".85"><title>${R.unit === "day" ? fmtDate(b.k) : "Week of " + fmtDate(b.k)}: ${signed(b.d)} rating, ${rec(b.rec)}</title></rect>`;
         if (showVals) s += `<text x="${cx}" y="${up ? yv - 6 : yv + 14}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${signed(b.d)}</text>`;
       }
       if ((B.length - 1 - i) % every === 0) s += `<text x="${cx}" y="${H - 22}" text-anchor="middle">${R.tick(b.k)}</text>`;
-      if (n && (showVals || (B.length - 1 - i) % every === 0)) s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" class="num">${b.w}–${b.l}</text>`;
+      if (n && (showVals || (B.length - 1 - i) % every === 0)) s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" class="num">${rec(b.rec)}</text>`;
     });
     const line = [[0, 0], ...P.live.map((b, i) => [i + 1, b.cum])].map(([x, v], i) => `${i ? "L" : "M"}${sx(x).toFixed(1)},${sy(v).toFixed(1)}`).join(" ");
     s += `<path d="${line}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>`;
@@ -830,10 +848,10 @@ function drawPeriod(id) {
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Rating change per ${R.unit}, running total and trend">${s}</svg>`;
   }
 
-  const rows = P.buckets.filter(b => b.w + b.l).reverse();
+  const rows = P.buckets.filter(b => nGames(b.rec)).reverse();
   $("#periodTable").hidden = !rows.length;
   $("#periodTable").innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>${R.unit === "day" ? "Day" : "Week of"}</th><th class="r">Played</th><th class="r">W–L</th><th class="r hide-sm">Win %</th><th class="r hide-sm">Points ±</th><th class="r">Change</th><th class="r">Rating</th></tr></thead><tbody>${
-    rows.map(b => `<tr><td>${R.unit === "day" ? R.tick(b.k) + " " + fmtDate(b.k) : R.tick(b.k)}</td><td class="r">${b.w + b.l}</td><td class="r">${b.w}–${b.l}</td><td class="r hide-sm">${pct(b.w, b.l)}</td>
+    rows.map(b => `<tr><td>${R.unit === "day" ? R.tick(b.k) + " " + fmtDate(b.k) : R.tick(b.k)}</td><td class="r">${nGames(b.rec)}</td><td class="r">${rec(b.rec)}</td><td class="r hide-sm">${pct(b.w, b.l, b.dr)}</td>
       <td class="r hide-sm">${signed(b.pf - b.pa)}</td><td class="r">${deltaSpan(b.d)}</td><td class="r">${Math.round(b.end)}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
@@ -848,19 +866,19 @@ function matchRow(m, pov, g) {
   if (pov) {
     const mine = onA ? m.a : m.b, theirs = onA ? m.b : m.a;
     const mates = mine.filter(x => x !== pov);
-    who = `<span class="res ${g.won ? "w" : "l"}">${g.won ? "W" : "L"}</span>${mates.length ? `with ${esc(teamName(mates))} ` : ""}vs ${esc(teamName(theirs))}`;
-    sc = hasPts ? `${onA ? m.scoreA : m.scoreB}–${onA ? m.scoreB : m.scoreA}` : "";
+    who = `<span class="res ${g.res}">${g.res.toUpperCase()}</span>${mates.length ? `with ${esc(teamName(mates))} ` : ""}vs ${esc(teamName(theirs))}`;
+    sc = !hasPts || (m.drawn && !m.scoreA && !m.scoreB) ? "" : `${onA ? m.scoreA : m.scoreB}–${onA ? m.scoreB : m.scoreA}`;
   } else {
     const A = esc(teamName(m.a)), B = esc(teamName(m.b));
-    who = wa ? `<b>${A}</b> beat ${B}` : `<b>${B}</b> beat ${A}`;
-    sc = hasPts ? `${Math.max(m.scoreA, m.scoreB)}–${Math.min(m.scoreA, m.scoreB)}` : "";
+    who = m.drawn ? `${A} drew with ${B}` : wa ? `<b>${A}</b> beat ${B}` : `<b>${B}</b> beat ${A}`;
+    sc = !hasPts || (m.drawn && !m.scoreA && !m.scoreB) ? "" : m.drawn ? `${m.scoreA}–${m.scoreB}` : `${Math.max(m.scoreA, m.scoreB)}–${Math.min(m.scoreA, m.scoreB)}`;
   }
   const rating = pov ? deltaSpan(g.change) + " rating" : `±${m._delta} rating`;
   const edit = canWrite ? `<button class="btn small ghost" data-edit="${m.id}">Edit</button>` : "";
   return `<div class="mitem">
     <div class="who">${who}</div>
     <div class="act"><span class="sc num">${sc}</span>${edit}</div>
-    <div class="meta num">${fmtDate(m.date)} · ${m.a.length > 1 ? "Doubles" : "Singles"} · ${rating}${isDeuce(m) ? ' <span class="pill e">Deuce</span>' : ""}</div>
+    <div class="meta num">${fmtDate(m.date)} · ${m.a.length > 1 ? "Doubles" : "Singles"} · ${rating}${m.drawn ? ` <span class="pill m">Draw${sc ? " · stopped" : ""}</span>` : isDeuce(m) ? ' <span class="pill e">Deuce</span>' : ""}</div>
   </div>`;
 }
 
@@ -921,7 +939,8 @@ function startEdit(id) {
   $("#a1").value = m.a[0] || ""; $("#b1").value = m.b[0] || "";
   $("#a2").value = m.a[1] || ""; $("#b2").value = m.b[1] || "";
   renderLogSelects();
-  $("#sA").value = m.scoreA ?? ""; $("#sB").value = m.scoreB ?? "";
+  $("#drawn").checked = !!m.drawn;
+  $("#sA").value = m.drawn && !m.scoreA && !m.scoreB ? "" : m.scoreA ?? ""; $("#sB").value = m.drawn && !m.scoreA && !m.scoreB ? "" : m.scoreB ?? "";
   $("#mdate").value = m.date || today();
   updateScoreUI(); renderEditState();
   go("log");
@@ -931,7 +950,7 @@ function stopEdit() {
   hideConfirm();
   editingId = null; confirmDel = false;
   ["a1", "a2", "b1", "b2"].forEach(x => $("#" + x).value = "");
-  $("#sA").value = ""; $("#sB").value = ""; $("#mdate").value = today();
+  $("#sA").value = ""; $("#sB").value = ""; $("#drawn").checked = false; $("#mdate").value = today();
   renderLogSelects(); updateScoreUI(); renderEditState();
 }
 
@@ -977,13 +996,11 @@ function drawLine() {
 function drawWL() {
   const el = $("#wlChart");
   const rows = players.map(p => {
-    const s = S.st[p.id];
-    const w = wlFilter === "all" ? s.w : wlFilter === "doubles" ? s.dw : s.sw;
-    const l = wlFilter === "all" ? s.l : wlFilter === "doubles" ? s.dl : s.sl;
-    return { p, w, l };
+    const r = wlFilter === "all" ? S.st[p.id] : S.st[p.id][wlFilter];
+    return { p, w: r.w, l: r.l, d: r.d };
   }).sort((a, b) => (b.w - b.l) - (a.w - a.l) || b.w - a.w);
   const max = Math.max(1, ...rows.map(r => Math.max(r.w, r.l)));
-  if (!rows.some(r => r.w + r.l)) { el.innerHTML = `<div class="empty"><strong>No ${wlFilter === "all" ? "" : wlFilter + " "}games yet</strong>Wins grow to the right, losses to the left.</div>`; return; }
+  if (!rows.some(r => nGames(r))) { el.innerHTML = `<div class="empty"><strong>No ${wlFilter === "all" ? "" : wlFilter + " "}games yet</strong>Wins grow to the right, losses to the left. Draws show next to the name.</div>`; return; }
   const W = Math.max(300, Math.round(el.clientWidth - 34 || 600)), rowH = 30, nameW = Math.min(110, W * 0.28);
   const H = rows.length * rowH + 24;
   const mid = nameW + (W - nameW) / 2, half = (W - nameW) / 2 - 26;
@@ -993,7 +1010,7 @@ function drawWL() {
     const y = i * rowH + 6, bh = rowH - 12;
     const lw = half * r.l / max, ww = half * r.w / max;
     const name = r.p.name.length > 12 ? r.p.name.slice(0, 11) + "…" : r.p.name;
-    s += `<text x="0" y="${y + bh / 2 + 4}" style="fill:var(--ink);font-weight:600">${esc(name)}</text>`;
+    s += `<text x="0" y="${y + bh / 2 + 4}" style="fill:var(--ink);font-weight:600">${esc(name)}${r.d ? `<tspan style="fill:var(--muted);font-weight:500"> ${r.d}D</tspan>` : ""}</text>`;
     s += `<rect x="${mid - lw}" y="${y}" width="${lw}" height="${bh}" rx="3" fill="var(--loss)"/>`;
     s += `<rect x="${mid}" y="${y}" width="${ww}" height="${bh}" rx="3" fill="var(--win)"/>`;
     s += `<text x="${mid - lw - 5}" y="${y + bh / 2 + 4}" text-anchor="end" class="num">${r.l}</text>`;
@@ -1033,10 +1050,11 @@ function updateScoreUI() {
   const B = [pick("b1"), logFmt === "doubles" ? pick("b2") : ""].filter(Boolean);
   $("#whoA").textContent = A.length ? teamName(A) : "Team A";
   $("#whoB").textContent = B.length ? teamName(B) : "Team B";
-  const lead = a !== null && b !== null && a !== b ? (a > b ? "a" : "b") : null;
+  const drawn = $("#drawn").checked;
+  const lead = !drawn && a !== null && b !== null && a !== b ? (a > b ? "a" : "b") : null;
   $("#boxA").classList.toggle("lead", lead === "a");
   $("#boxB").classList.toggle("lead", lead === "b");
-  $("#scoreHint").textContent = lead ? `${lead === "a" ? $("#whoA").textContent : $("#whoB").textContent} win ${Math.max(a, b)}–${Math.min(a, b)}`
+  $("#scoreHint").textContent = drawn ? (a || b ? `Draw: stopped at ${a ?? 0}–${b ?? 0}` : "Draw: no score needed") : lead ? `${lead === "a" ? $("#whoA").textContent : $("#whoB").textContent} win ${Math.max(a, b)}–${Math.min(a, b)}`
     : a !== null && b !== null && a === b ? "Scores are level. One game needs a winner." : "Type the points or use − and +. The higher score wins.";
 }
 $$("[data-step]").forEach(b => b.addEventListener("click", () => {
@@ -1046,6 +1064,7 @@ $$("[data-step]").forEach(b => b.addEventListener("click", () => {
   updateScoreUI();
 }));
 ["sA", "sB"].forEach(id => $("#" + id).addEventListener("input", updateScoreUI));
+$("#drawn").addEventListener("change", updateScoreUI);
 ["a1", "a2", "b1", "b2"].forEach(id => $("#" + id).addEventListener("change", () => { renderLogSelects(); updateScoreUI(); }));
 
 $("#logForm").addEventListener("submit", async e => {
@@ -1056,14 +1075,18 @@ $("#logForm").addEventListener("submit", async e => {
   const all = [...a, ...b];
   if (all.some(x => !x)) { msg.className = "msg err"; msg.textContent = `Choose ${all.length} players.`; return; }
   if (new Set(all).size !== all.length) { msg.className = "msg err"; msg.textContent = "A player can only be on court once."; return; }
-  const sa = readScore("sA"), sb = readScore("sB");
+  const drawn = $("#drawn").checked;
+  // a draw can be saved without a score (stored as 0–0)
+  const sa = readScore("sA") ?? (drawn ? 0 : null), sb = readScore("sB") ?? (drawn ? 0 : null);
   if (sa === null || sb === null) { msg.className = "msg err"; msg.textContent = "Enter both scores."; return; }
   if (!validPts(sa) || !validPts(sb)) { msg.className = "msg err"; msg.textContent = "Scores must be whole numbers from 0 to 99."; return; }
-  if (sa === sb) { msg.className = "msg err"; msg.textContent = "Scores are level. Enter the final score with a winner."; return; }
+  if (sa === sb && !drawn) { msg.className = "msg err"; msg.textContent = "Scores are level. Enter the final score with a winner, or tick “Didn't finish”."; return; }
   if (!canWrite) { msg.className = "msg err"; msg.textContent = "Enter the team PIN at the top of the page to save matches."; $("#pinInput").focus(); return; }
-  const winner = sa > sb ? "a" : "b";
+  const winner = drawn ? "draw" : sa > sb ? "a" : "b";
   const args = { p_played_on: $("#mdate").value || today(), p_team_a: a, p_team_b: b, p_score_a: sa, p_score_b: sb };
-  showConfirm({ a, b, sa, sb, winner, args });
+  // only send p_drawn when needed, so plain wins still save on a database that hasn't been upgraded yet
+  if (drawn || editingId) args.p_drawn = drawn;
+  showConfirm({ a, b, sa, sb, winner, drawn, args });
 });
 
 // Badminton to 21: win by 2 from 20-all, capped at 30–29. Anything else gets a warning, not a block.
@@ -1078,6 +1101,8 @@ function scoreCheck(hi, lo) {
 let pending = null;
 function showConfirm(p) {
   pending = p;
+  if (p.drawn) return showDrawConfirm(p);
+  $("#confirmBox").classList.remove("draw");
   const hi = Math.max(p.sa, p.sb), lo = Math.min(p.sa, p.sb);
   const W = p.winner === "a" ? p.a : p.b, L = p.winner === "a" ? p.b : p.a;
   const fake = { scoreA: p.sa, scoreB: p.sb };
@@ -1108,6 +1133,34 @@ function showConfirm(p) {
   $("#confirmBack").addEventListener("click", () => { hideConfirm(); $("#saveMatch").focus(); });
   $("#confirmSave").focus();
 }
+function showDrawConfirm(p) {
+  const avg = ids => ids.reduce((t, id) => t + (S.elo[id] ?? START), 0) / ids.length;
+  let rate = "";
+  if (!editingId) {
+    const d = Math.round(K * DRAW_FACTOR * (0.5 - expected(avg(p.a), avg(p.b))));
+    rate = d === 0 ? `<p class="hint">Rating: no change, the sides are evenly rated.</p>`
+      : `<p class="hint num">Rating: about ${deltaSpan(d)} for ${esc(teamName(p.a))}, ${deltaSpan(-d)} for ${esc(teamName(p.b))}.</p>`;
+  }
+  const hi = Math.max(p.sa, p.sb), lo = Math.min(p.sa, p.sb);
+  const finished = hi >= 21 && hi - lo >= 2;
+  const day = new Date(p.args.p_played_on + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  $("#confirmBox").classList.add("draw");
+  $("#confirmBox").innerHTML = `
+    <span class="label">${editingId ? "Check the changes" : "Check before saving"}</span>
+    <div class="cf-score">Draw</div>
+    <div class="cf-who"><b>${esc(teamName(p.a))}</b> and <b>${esc(teamName(p.b))}</b></div>
+    <p class="hint num">${p.sa || p.sb ? `Stopped at ${p.sa}–${p.sb} · ` : ""}${p.a.length > 1 ? "Doubles" : "Singles"} · ${day}</p>
+    ${finished ? `<p class="cf-warn">⚠ ${hi}–${lo} looks like a finished game. Untick “Didn't finish” to record it as a win.</p>` : ""}
+    ${rate}
+    <div class="actions">
+      <button class="btn primary" type="button" id="confirmSave">${editingId ? "Confirm changes" : "Confirm & save draw"}</button>
+      <button class="btn ghost" type="button" id="confirmBack">Go back</button>
+    </div>`;
+  $("#confirmBox").hidden = false; $("#logActions").hidden = true;
+  $("#confirmSave").addEventListener("click", doSave);
+  $("#confirmBack").addEventListener("click", () => { hideConfirm(); $("#saveMatch").focus(); });
+  $("#confirmSave").focus();
+}
 function hideConfirm() { pending = null; $("#confirmBox").hidden = true; $("#confirmBox").innerHTML = ""; $("#logActions").hidden = false; }
 // changing anything in the form throws away the pending confirmation
 ["input", "change"].forEach(ev => $("#logForm").addEventListener(ev, () => { if (pending) hideConfirm(); }));
@@ -1115,18 +1168,19 @@ $("#logForm").addEventListener("click", e => { if (pending && e.target.closest("
 
 async function doSave() {
   if (!pending) return;
-  const { a, b, sa, sb, winner, args } = pending;
+  const { a, b, sa, sb, winner, drawn, args } = pending;
+  const said = drawn ? `a draw${sa || sb ? ` (stopped at ${sa}–${sb})` : ""}` : `${teamName(winner === "a" ? a : b)} won ${Math.max(sa, sb)}–${Math.min(sa, sb)}`;
   const msg = $("#logMsg"); msg.className = "msg";
   $("#confirmSave").disabled = true;
   try {
     if (editingId) {
       await rpc("update_match", { p_id: editingId, ...args });
       stopEdit();
-      msg.className = "msg ok"; msg.textContent = `Updated: ${teamName(winner === "a" ? a : b)} won ${Math.max(sa, sb)}–${Math.min(sa, sb)}.`;
+      msg.className = "msg ok"; msg.textContent = `Updated: ${said}.`;
     } else {
       await rpc("add_match", args);
-      msg.className = "msg ok"; msg.textContent = `Saved: ${teamName(winner === "a" ? a : b)} won ${Math.max(sa, sb)}–${Math.min(sa, sb)}.`;
-      $("#sA").value = ""; $("#sB").value = ""; updateScoreUI();
+      msg.className = "msg ok"; msg.textContent = `Saved: ${said}.`;
+      $("#sA").value = ""; $("#sB").value = ""; $("#drawn").checked = false; updateScoreUI();
     }
     hideConfirm();
     reload();
@@ -1136,7 +1190,7 @@ async function doSave() {
 function resetLog() {
   hideConfirm();
   ["a1", "a2", "b1", "b2"].forEach(x => $("#" + x).value = "");
-  $("#sA").value = ""; $("#sB").value = ""; $("#mdate").value = today();
+  $("#sA").value = ""; $("#sB").value = ""; $("#drawn").checked = false; $("#mdate").value = today();
   $("#logMsg").textContent = "";
   renderLogSelects(); updateScoreUI();
   $("#a1").focus();
@@ -1194,7 +1248,7 @@ function writeError(err) {
   if (m.includes("duplicate_player")) return "A player can only be on court once.";
   if (m.includes("unknown_player")) return "One of those players was removed. Reload and try again.";
   if (m.includes("match_not_found")) return "That match was already deleted.";
-  if (m.includes("update_match") || (err && err.code === "PGRST202")) return "Editing isn't set up in the database yet. Run supabase/schema.sql again in Supabase.";
+  if (m.includes("update_match") || m.includes("p_drawn") || (err && err.code === "PGRST202")) return "Editing and draws aren't set up in the database yet. Run supabase/schema.sql again in Supabase.";
   if (err && err.code === "23505") return "That name is already on the roster.";
   return "Couldn't save. Check your connection and try again.";
 }
@@ -1227,14 +1281,14 @@ $("#lockForm").addEventListener("submit", async e => {
 $("#lockBtn").addEventListener("click", () => setLocked());
 
 const toPlayer = r => ({ id: r.id, name: r.name, createdAt: Date.parse(r.created_at) });
-const toMatch = r => ({ id: r.id, date: r.played_on, createdAt: Date.parse(r.created_at), a: r.team_a, b: r.team_b, scoreA: r.score_a, scoreB: r.score_b, winner: r.winner });
+const toMatch = r => ({ id: r.id, date: r.played_on, createdAt: Date.parse(r.created_at), a: r.team_a, b: r.team_b, scoreA: r.score_a, scoreB: r.score_b, drawn: !!r.drawn, winner: r.drawn ? "draw" : r.winner });
 let reloading = null, reloadT;
 async function reload() {
   if (reloading) return reloading;
   reloading = (async () => {
     const [p, m] = await Promise.all([
       sb.from("players").select("id,name,created_at").order("created_at"),
-      sb.from("matches").select("id,played_on,created_at,team_a,team_b,score_a,score_b,winner").limit(10000),
+      sb.from("matches").select("*").limit(10000),
     ]);
     if (p.error || m.error) { setStatus("Couldn't load results. Check your connection and reload."); return; }
     setStatus("");

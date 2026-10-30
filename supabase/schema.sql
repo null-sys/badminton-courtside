@@ -3,7 +3,7 @@
 --
 -- Who can do what:
 --   anyone with the site link  → read players and matches
---   anyone with the team PIN   → add/remove players, log/edit/delete matches (via the functions below)
+--   anyone with the team PIN   → add/remove players, log/edit/delete matches, mark unfinished games as draws
 -- Nobody can write to the tables directly, and the PIN hash is never readable.
 
 create extension if not exists pgcrypto with schema extensions;
@@ -24,10 +24,35 @@ create table if not exists public.matches (
   team_b     uuid[] not null,
   score_a    int not null check (score_a between 0 and 99),
   score_b    int not null check (score_b between 0 and 99),
-  winner     text generated always as (case when score_a > score_b then 'a' else 'b' end) stored,
-  check (score_a <> score_b),
+  -- drawn: the game was stopped before anyone won (time ran out etc.); scores are where it stopped
+  drawn      boolean not null default false,
+  winner     text generated always as (case when drawn then 'draw' when score_a > score_b then 'a' else 'b' end) stored,
+  constraint matches_decided check (drawn or score_a <> score_b),
   check (cardinality(team_a) between 1 and 2 and cardinality(team_a) = cardinality(team_b))
 );
+
+-- Upgrade older databases: add the drawn flag, let drawn games have level scores, and teach winner about draws.
+alter table public.matches add column if not exists drawn boolean not null default false;
+do $$
+declare c record;
+begin
+  for c in select conname from pg_constraint
+            where conrelid = 'public.matches'::regclass and contype = 'c'
+              and pg_get_constraintdef(oid) ilike '%score_a <> score_b%' and conname <> 'matches_decided'
+  loop
+    execute format('alter table public.matches drop constraint %I', c.conname);
+  end loop;
+  if not exists (select 1 from pg_constraint where conrelid = 'public.matches'::regclass and conname = 'matches_decided') then
+    alter table public.matches add constraint matches_decided check (drawn or score_a <> score_b);
+  end if;
+  if not exists (select 1 from information_schema.columns
+                  where table_schema = 'public' and table_name = 'matches' and column_name = 'winner'
+                    and generation_expression ilike '%drawn%') then
+    alter table public.matches drop column if exists winner;
+    alter table public.matches add column winner text
+      generated always as (case when drawn then 'draw' when score_a > score_b then 'a' else 'b' end) stored;
+  end if;
+end $$;
 
 create table if not exists public.team_secret (
   id       int primary key default 1 check (id = 1),
@@ -83,8 +108,11 @@ begin
   delete from public.players where id = p_id;
 end $$;
 
+drop function if exists public.add_match(text, date, uuid[], uuid[], int, int);
+drop function if exists public.update_match(text, uuid, date, uuid[], uuid[], int, int);
+
 create or replace function public.add_match(
-  pin text, p_played_on date, p_team_a uuid[], p_team_b uuid[], p_score_a int, p_score_b int
+  pin text, p_played_on date, p_team_a uuid[], p_team_b uuid[], p_score_a int, p_score_b int, p_drawn boolean default false
 ) returns uuid
 language plpgsql security definer set search_path = public, extensions as $$
 declare
@@ -98,14 +126,14 @@ begin
   if (select count(*) from public.players where id = any(everyone)) <> cardinality(everyone) then
     raise exception 'unknown_player';
   end if;
-  insert into public.matches (played_on, team_a, team_b, score_a, score_b)
-  values (coalesce(p_played_on, current_date), p_team_a, p_team_b, p_score_a, p_score_b)
+  insert into public.matches (played_on, team_a, team_b, score_a, score_b, drawn)
+  values (coalesce(p_played_on, current_date), p_team_a, p_team_b, p_score_a, p_score_b, coalesce(p_drawn, false))
   returning id into new_id;
   return new_id;
 end $$;
 
 create or replace function public.update_match(
-  pin text, p_id uuid, p_played_on date, p_team_a uuid[], p_team_b uuid[], p_score_a int, p_score_b int
+  pin text, p_id uuid, p_played_on date, p_team_a uuid[], p_team_b uuid[], p_score_a int, p_score_b int, p_drawn boolean default false
 ) returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare everyone uuid[] := p_team_a || p_team_b;
@@ -119,7 +147,7 @@ begin
   end if;
   update public.matches
      set played_on = coalesce(p_played_on, played_on), team_a = p_team_a, team_b = p_team_b,
-         score_a = p_score_a, score_b = p_score_b
+         score_a = p_score_a, score_b = p_score_b, drawn = coalesce(p_drawn, false)
    where id = p_id;
   if not found then raise exception 'match_not_found'; end if;
 end $$;
@@ -134,8 +162,8 @@ end $$;
 grant execute on function public.check_pin(text)                                to anon, authenticated;
 grant execute on function public.add_player(text, text)                         to anon, authenticated;
 grant execute on function public.remove_player(text, uuid)                      to anon, authenticated;
-grant execute on function public.add_match(text, date, uuid[], uuid[], int, int) to anon, authenticated;
-grant execute on function public.update_match(text, uuid, date, uuid[], uuid[], int, int) to anon, authenticated;
+grant execute on function public.add_match(text, date, uuid[], uuid[], int, int, boolean) to anon, authenticated;
+grant execute on function public.update_match(text, uuid, date, uuid[], uuid[], int, int, boolean) to anon, authenticated;
 grant execute on function public.delete_match(text, uuid)                       to anon, authenticated;
 
 -- ---------- live updates ----------
