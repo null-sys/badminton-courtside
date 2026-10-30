@@ -38,7 +38,7 @@ Send the link and the PIN in your team chat. On phones, open the link and use **
 
 ## Day to day
 - **+ Log match** (the page opens here): pick players, enter the score, tap **Save match**, check the summary (winner, score, rating change), then **Confirm & save**. **Reset** clears the form. Unusual scores such as 21–20 get a warning before saving.
-- **Didn't finish?** Tick **Didn't finish: count as a draw** when a game is stopped early (out of time, injury). The score at the stop is optional. A draw counts as half a win, and only moves rating from the higher-rated side to the lower-rated one.
+- **Didn't finish?** Tick **Didn't finish: count as a draw** when a game is stopped early (out of time, injury). The score at the stop is optional. A draw doesn't change anyone's rating or win %: it only counts as a game played and shows in the D column.
 - **Matches**: every game grouped by week. Unlock, then **Edit** to fix players, score or date, or delete it.
 - **Players**: tap anyone for their profile: rating, streak, who they beat most, best partners and toughest opponents.
   **Performance** has three views: **Week** (split by day), **Month** and **Lifetime** (split by week). Each shows rating change, record, points and a trend (rising, steady or falling, from the slope of their rating over that period). Use ‹ › to step back through earlier weeks or months.

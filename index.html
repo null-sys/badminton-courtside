@@ -308,7 +308,7 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
       <div class="block-head"><h2>Standings</h2><span class="hint">Tap a player for their profile</span></div>
       <div class="card flush" id="standings"></div>
       <details class="about"><summary>How ratings work</summary>
-        <p class="hint">Everyone starts at 1000. Beating a stronger side earns more than beating a weaker one, and a big win moves the rating more than a close one (21–10 counts about 40% more than 21–19). Deuce games (22–20, 25–23, 30–29…) count as the closest possible result. A game that didn't finish counts as a draw (half a win): it only moves points from the higher-rated side to the lower-rated one, and win % counts it as half. In doubles both partners gain or lose the same amount. “Week” is the change since Monday.</p>
+        <p class="hint">Everyone starts at 1000. Beating a stronger side earns more than beating a weaker one, and a big win moves the rating more than a close one (21–10 counts about 40% more than 21–19). Deuce games (22–20, 25–23, 30–29…) count as the closest possible result. A game that didn't finish is a draw: ratings and win % stay the same, it only adds to games played and draws. In doubles both partners gain or lose the same amount. “Week” is the change since Monday.</p>
       </details>
     </div>
     <div class="block">
@@ -462,13 +462,13 @@ function fmtDate(s) { const d = new Date(s + "T00:00:00"); return isNaN(d) ? s :
 function fmtRange(wk) { return `${fmtDate(wk)} – ${fmtDate(weekEnd(wk))}`; }
 function signed(n) { const r = Math.round(n); return r > 0 ? "+" + r : r < 0 ? "−" + Math.abs(r) : "±0"; }
 function deltaSpan(n) { const r = Math.round(n); return `<span class="delta num ${r > 0 ? "up" : r < 0 ? "down" : "flat"}">${signed(n)}</span>`; }
-// Records are { w, l, d }; a draw counts as half a win in win %.
+// Records are { w, l, d }. Draws count as games played but are left out of win %.
 function nGames(r) { return r.w + r.l + (r.d || 0); }
 function rec(r) { return `${r.w}–${r.l}${r.d ? `–${r.d}` : ""}`; }
-function pct(w, l, d = 0) { return w + l + d ? Math.round(100 * (w + d / 2) / (w + l + d)) + "%" : "–"; }
+function pct(w, l) { return w + l ? Math.round(100 * w / (w + l)) + "%" : "–"; }
 function tally(r, res) { r[res] = (r[res] || 0) + 1; return r; }
 // Win rate pulled toward 50% so a 1–0 record doesn't outrank 8–2.
-function smoothed(r) { return (r.w + (r.d || 0) / 2 + 1) / (nGames(r) + 2); }
+function smoothed(r) { return (r.w + 1) / (r.w + r.l + 2); }
 
 // Margin as a share of the winner's points, so it works for games to 11, 15 or 21.
 // 21-19 → ×0.82, 21-15 → ×0.96, 21-10 → ×1.14, 21-0 → ×1.5. Matches without a score count ×1.
@@ -482,9 +482,6 @@ function marginFactor(m) {
   if (lo >= 20) return 0.75;
   return 0.75 + 0.75 * (hi - lo) / hi;
 }
-// An unfinished game counts as a draw (result ½). The score at the stop is ignored and it moves ratings
-// at the lowest weight, ×0.75: a draw only shifts points from the favourite to the underdog.
-const DRAW_FACTOR = 0.75;
 
 // ---------- stats: replay every match in date order ----------
 function compute() {
@@ -502,7 +499,8 @@ function compute() {
     const ra = a.reduce((s, id) => s + elo[id], 0) / a.length;
     const rb = b.reduce((s, id) => s + elo[id], 0) / b.length;
     const sa = m.drawn ? 0.5 : m.winner === "a" ? 1 : 0;
-    const d = K * (m.drawn ? DRAW_FACTOR : marginFactor(m)) * (sa - expected(ra, rb));
+    // an unfinished game (draw) leaves every rating where it was; it only counts as a game played
+    const d = m.drawn ? 0 : K * marginFactor(m) * (sa - expected(ra, rb));
     m._delta = Math.round(Math.abs(d));
     m._week = weekOf(m.date);
     const dbl = a.length > 1;
@@ -595,7 +593,7 @@ function renderStandings() {
         <td class="r rating">${Math.round(S.elo[id])}</td>
         <td class="r">${w ? deltaSpan(w.end - w.start) : '<span class="hint">–</span>'}</td>
         <td class="r">${rec(s)}</td>
-        <td class="r hide-sm">${pct(s.w, s.l, s.d)}</td>
+        <td class="r hide-sm">${pct(s.w, s.l)}</td>
         <td class="hide-sm"><span class="form">${last || '<span class="hint">no games</span>'}</span></td></tr>`;
     }).join("")}</tbody></table></div>`;
 }
@@ -606,7 +604,7 @@ function renderPairs() {
     .sort((x, y) => smoothed(y) - smoothed(x) || (nGames(y)) - (nGames(x)));
   if (!list.length) { el.innerHTML = `<p class="hint" style="padding:12px 16px">Partnerships show up here after your first doubles match.</p>`; return; }
   el.innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>Pair</th><th class="r">W–L</th><th class="r">Win %</th></tr></thead><tbody>${
-    list.slice(0, 6).map(p => `<tr><td>${esc(teamName(p.ids))}</td><td class="r">${rec(p)}</td><td class="r">${pct(p.w, p.l, p.d)}</td></tr>`).join("")
+    list.slice(0, 6).map(p => `<tr><td>${esc(teamName(p.ids))}</td><td class="r">${rec(p)}</td><td class="r">${pct(p.w, p.l)}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
@@ -627,7 +625,7 @@ function renderRoster() {
   el.innerHTML = S.ranked.map((id, i) => {
     const s = S.st[id];
     return `<button type="button" class="card pcard" data-player="${id}">
-      <div class="top">${avatar(id, 38)}<div style="min-width:0"><div class="nm">${esc(pName(id))}</div><div class="rk num">#${i + 1} · ${rec(s)} · ${pct(s.w, s.l, s.d)}</div></div></div>
+      <div class="top">${avatar(id, 38)}<div style="min-width:0"><div class="nm">${esc(pName(id))}</div><div class="rk num">#${i + 1} · ${rec(s)} · ${pct(s.w, s.l)}</div></div></div>
       <div class="stats"><span class="rating num">${Math.round(S.elo[id])}</span>${sparkline(id)}</div>
     </button>`;
   }).join("");
@@ -641,8 +639,8 @@ function recordList(map, dir) {
 }
 function muBlock(title, list, empty) {
   return `<div class="card mu"><h3>${title}</h3>${list.length ? list.slice(0, 3).map(r => `<div class="murow">
-      ${playerLink(r.id, 22)}<span class="rec num">${rec(r)} · ${pct(r.w, r.l, r.d)}</span>
-      <div class="bar" aria-hidden="true"><span style="width:${Math.round(100 * r.w / (nGames(r)))}%"></span></div>
+      ${playerLink(r.id, 22)}<span class="rec num">${rec(r)} · ${pct(r.w, r.l)}</span>
+      <div class="bar" aria-hidden="true"><span style="width:${Math.round(100 * r.w / (r.w + r.l))}%"></span></div>
     </div>`).join("") : `<p class="hint">${empty}</p>`}</div>`;
 }
 
@@ -669,7 +667,7 @@ function renderProfile() {
       <div class="tiles num">
         <div class="tile"><div class="lab">Rating</div><div class="val">${Math.round(S.elo[id])}</div></div>
         <div class="tile"><div class="lab">This week</div><div class="val ${weekD > 0.5 ? "up" : weekD < -0.5 ? "down" : ""}">${wk ? signed(weekD) : "–"}${wk ? `<small>${rec(wk)}</small>` : ""}</div></div>
-        <div class="tile"><div class="lab">Record</div><div class="val">${rec(s)}<small>${pct(s.w, s.l, s.d)}</small></div></div>
+        <div class="tile"><div class="lab">Record</div><div class="val">${rec(s)}<small>${pct(s.w, s.l)}</small></div></div>
         <div class="tile"><div class="lab">Streak</div><div class="val ${sk ? (sk.kind === "w" ? "up" : sk.kind === "l" ? "down" : "") : ""}">${sk ? sk.kind.toUpperCase() + sk.n : "–"}</div></div>
         <div class="tile"><div class="lab">Peak</div><div class="val">${Math.round(s.peak)}</div></div>
       </div>
@@ -799,13 +797,13 @@ function drawPeriod(id) {
   const trendTxt = T.kind === "none" ? `<span class="pill m">${T.why}</span>`
     : `<span class="pill ${T.kind === "up" ? "w" : T.kind === "down" ? "l" : "m"}">${T.kind === "up" ? "▲ Rising" : T.kind === "down" ? "▼ Falling" : "■ Steady"}</span> <span class="hint num">${signed(T.slope)}/${per}</span>`;
   const g = nGames(P), pg = prev ? nGames(prev) : 0;
-  const pts = r => Math.round(100 * (r.w + r.d / 2) / nGames(r));
-  const wrDiff = g && pg ? pts(P) - pts(prev) : null;
+  const pts = r => Math.round(100 * r.w / (r.w + r.l));
+  const wrDiff = P.w + P.l && prev && prev.w + prev.l ? pts(P) - pts(prev) : null;
   const unitName = profPeriod === "week" ? "week" : profPeriod === "month" ? "month" : "";
   $("#trendRow").innerHTML = `
     <div class="card stat"><span class="lab">Trend</span><span>${trendTxt}</span></div>
     <div class="card stat"><span class="lab">Rating change</span><span class="big">${g ? deltaSpan(P.net) : "–"}</span><span class="hint num">${Math.round(P.start)} → ${Math.round(P.start + P.net)}</span></div>
-    <div class="card stat"><span class="lab">Record</span><span class="big num">${rec(P)}</span><span class="hint num">${pct(P.w, P.l, P.d)} won${wrDiff !== null ? ` · <span class="delta ${wrDiff > 0 ? "up" : wrDiff < 0 ? "down" : "flat"}">${wrDiff > 0 ? "▲" : wrDiff < 0 ? "▼" : ""}${Math.abs(wrDiff)} pts</span> vs last ${unitName}` : ""}</span></div>
+    <div class="card stat"><span class="lab">Record</span><span class="big num">${rec(P)}</span><span class="hint num">${pct(P.w, P.l)} won${wrDiff !== null ? ` · <span class="delta ${wrDiff > 0 ? "up" : wrDiff < 0 ? "down" : "flat"}">${wrDiff > 0 ? "▲" : wrDiff < 0 ? "▼" : ""}${Math.abs(wrDiff)} pts</span> vs last ${unitName}` : ""}</span></div>
     <div class="card stat"><span class="lab">Points ±</span><span class="big num">${g ? signed(P.pf - P.pa) : "–"}</span><span class="hint num">${g ? `${(P.pf / g).toFixed(1)} for · ${(P.pa / g).toFixed(1)} against per game` : "no games"}</span></div>`;
 
   if (!g) {
@@ -851,7 +849,7 @@ function drawPeriod(id) {
   const rows = P.buckets.filter(b => nGames(b.rec)).reverse();
   $("#periodTable").hidden = !rows.length;
   $("#periodTable").innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>${R.unit === "day" ? "Day" : "Week of"}</th><th class="r">Played</th><th class="r">W–L</th><th class="r hide-sm">Win %</th><th class="r hide-sm">Points ±</th><th class="r">Change</th><th class="r">Rating</th></tr></thead><tbody>${
-    rows.map(b => `<tr><td>${R.unit === "day" ? R.tick(b.k) + " " + fmtDate(b.k) : R.tick(b.k)}</td><td class="r">${nGames(b.rec)}</td><td class="r">${rec(b.rec)}</td><td class="r hide-sm">${pct(b.w, b.l, b.dr)}</td>
+    rows.map(b => `<tr><td>${R.unit === "day" ? R.tick(b.k) + " " + fmtDate(b.k) : R.tick(b.k)}</td><td class="r">${nGames(b.rec)}</td><td class="r">${rec(b.rec)}</td><td class="r hide-sm">${pct(b.w, b.l)}</td>
       <td class="r hide-sm">${signed(b.pf - b.pa)}</td><td class="r">${deltaSpan(b.d)}</td><td class="r">${Math.round(b.end)}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
@@ -873,7 +871,7 @@ function matchRow(m, pov, g) {
     who = m.drawn ? `${A} drew with ${B}` : wa ? `<b>${A}</b> beat ${B}` : `<b>${B}</b> beat ${A}`;
     sc = !hasPts || (m.drawn && !m.scoreA && !m.scoreB) ? "" : m.drawn ? `${m.scoreA}–${m.scoreB}` : `${Math.max(m.scoreA, m.scoreB)}–${Math.min(m.scoreA, m.scoreB)}`;
   }
-  const rating = pov ? deltaSpan(g.change) + " rating" : `±${m._delta} rating`;
+  const rating = m.drawn ? "no rating change" : pov ? deltaSpan(g.change) + " rating" : `±${m._delta} rating`;
   const edit = canWrite ? `<button class="btn small ghost" data-edit="${m.id}">Edit</button>` : "";
   return `<div class="mitem">
     <div class="who">${who}</div>
@@ -1134,13 +1132,7 @@ function showConfirm(p) {
   $("#confirmSave").focus();
 }
 function showDrawConfirm(p) {
-  const avg = ids => ids.reduce((t, id) => t + (S.elo[id] ?? START), 0) / ids.length;
-  let rate = "";
-  if (!editingId) {
-    const d = Math.round(K * DRAW_FACTOR * (0.5 - expected(avg(p.a), avg(p.b))));
-    rate = d === 0 ? `<p class="hint">Rating: no change, the sides are evenly rated.</p>`
-      : `<p class="hint num">Rating: about ${deltaSpan(d)} for ${esc(teamName(p.a))}, ${deltaSpan(-d)} for ${esc(teamName(p.b))}.</p>`;
-  }
+  const rate = `<p class="hint">Ratings don't change. It counts as a game played and a draw.</p>`;
   const hi = Math.max(p.sa, p.sb), lo = Math.min(p.sa, p.sb);
   const finished = hi >= 21 && hi - lo >= 2;
   const day = new Date(p.args.p_played_on + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
