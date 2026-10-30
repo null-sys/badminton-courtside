@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e3b2e">
+<title>Badminton Courtside</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: dark brand header, sticky tab strip, one centred column; panels swap in place */
+:root {
+  --bg: #f2f4f1; --surface: #ffffff; --surface-2: #f7f9f6; --ink: #13201a; --muted: #5b6a62; --line: #dde4df;
+  --brand: #0e3b2e; --brand-2: #155c47; --ball: #d7ff3a; --on-brand: #eaf3ee; --on-brand-muted: #9fc1b2;
+  --accent: #155c47; --accent-ink: #ffffff; --win: #1b7f46; --loss: #c0402b; --even: #a8740f;
+  --win-soft: #e4f3ea; --loss-soft: #fbe9e5;
+  --shadow: 0 1px 2px rgba(16, 32, 24, .06), 0 4px 16px rgba(16, 32, 24, .05);
+  --c1: #2350b8; --c2: #d0632a; --c3: #1d7f47; --c4: #8a3fb0; --c5: #c23a6a; --c6: #0f8a96; --c7: #8c6a12; --c8: #4b5a66;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1411; --surface: #151e1a; --surface-2: #1a2520; --ink: #e7eee9; --muted: #93a39a; --line: #26332d;
+  --brand: #0a2a21; --brand-2: #12483a; --on-brand: #e7f2ec; --on-brand-muted: #8fb4a4;
+  --accent: #6fd3a5; --accent-ink: #062018; --win: #4cc283; --loss: #ff7a63; --even: #e2b04a;
+  --win-soft: #15301f; --loss-soft: #3a1c17; --shadow: none;
+  --c1: #7ea2ff; --c2: #f0935c; --c3: #4cc283; --c4: #c08bf0; --c5: #f27aa6; --c6: #4cc9d4; --c7: #d8b45a; --c8: #a6b3bd;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1411; --surface: #151e1a; --surface-2: #1a2520; --ink: #e7eee9; --muted: #93a39a; --line: #26332d;
+  --brand: #0a2a21; --brand-2: #12483a; --on-brand: #e7f2ec; --on-brand-muted: #8fb4a4;
+  --accent: #6fd3a5; --accent-ink: #062018; --win: #4cc283; --loss: #ff7a63; --even: #e2b04a;
+  --win-soft: #15301f; --loss-soft: #3a1c17; --shadow: none;
+  --c1: #7ea2ff; --c2: #f0935c; --c3: #4cc283; --c4: #c08bf0; --c5: #f27aa6; --c6: #4cc9d4; --c7: #d8b45a; --c8: #a6b3bd;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; -webkit-text-size-adjust: 100%; }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-transform: uppercase; letter-spacing: .02em; line-height: 1.05; text-wrap: balance; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; letter-spacing: .05em; color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+a { color: inherit; }
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+header.top { background: var(--brand); color: var(--on-brand); padding-top: env(safe-area-inset-top, 0px); }
+header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-block: 16px; }
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand svg { width: 42px; height: 42px; flex: none; }
+.brand h1 { font-size: 1.85rem; font-weight: 800; letter-spacing: .03em; }
+.brand .eyebrow { display: block; font: 700 .7rem var(--body); letter-spacing: .22em; color: var(--ball); margin-bottom: 2px; }
+.brand .sub { color: var(--on-brand-muted); font-size: .85rem; margin: 2px 0 0; }
+.lock { display: flex; align-items: center; gap: 6px; }
+.lock input { width: 8.5em; padding: 8px 10px; font-size: .95rem; border-radius: 10px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.08); color: var(--on-brand); }
+.lock input::placeholder { color: var(--on-brand-muted); }
+.lock .state { font-size: .82rem; color: var(--ball); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.lock .state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ball); }
+header .btn { background: var(--ball); color: #13201a; }
+header .btn.ghost { background: none; color: var(--on-brand); border-color: rgba(255,255,255,.25); }
+.lockmsg { margin: 0; padding-bottom: 10px; font-size: .88rem; color: #ffb4a6; }
+.lockmsg:empty { display: none; }
+
+nav.tabs { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
+nav.tabs .wrap { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-block: 8px; }
+nav.tabs .wrap::-webkit-scrollbar { display: none; }
+nav.tabs button { flex: 0 0 auto; font: 600 .82rem var(--body); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: none; border: 0; padding: 9px 13px; border-radius: 999px; cursor: pointer; }
+nav.tabs button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+nav.tabs .spacer { flex: 1 1 auto; }
+nav.tabs button.cta { background: var(--accent); color: var(--accent-ink); }
+nav.tabs button.cta[aria-selected="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+
+main.wrap { padding-block: 20px 56px; }
+section.panel { display: flex; flex-direction: column; gap: 22px; }
+.block { display: flex; flex-direction: column; gap: 10px; }
+.block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+.card.flush { padding: 4px 0; }
+.hint { color: var(--muted); font-size: .88rem; margin: 0; }
+.empty { border: 1px dashed var(--line); border-radius: 14px; padding: 22px; text-align: center; color: var(--muted); }
+.empty strong { color: var(--ink); display: block; margin-bottom: 4px; }
+.banner { padding: 10px 12px; border-radius: 10px; background: var(--loss-soft); border: 1px solid var(--line); color: var(--ink); font-size: .9rem; margin-bottom: 16px; }
+details.about summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+details.about p { margin: 6px 0 0; }
+
+/* tables */
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font: 600 .7rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 11px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+tbody tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+tr.link { cursor: pointer; }
+tr.link:hover td { background: var(--surface-2); }
+.rank { font-family: var(--display); font-size: 1.25rem; color: var(--muted); width: 2.4ch; }
+tr.top1 .rank { color: var(--even); }
+.rating { font-family: var(--display); font-size: 1.3rem; font-weight: 700; }
+.pname { font-weight: 600; display: inline-flex; align-items: center; gap: 10px; }
+.plink { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.plink:hover .nm { text-decoration: underline; text-underline-offset: 3px; }
+.avatar { --size: 28px; width: var(--size); height: var(--size); border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 calc(var(--size) * .4) var(--body); color: #fff; letter-spacing: .02em; }
+.form { display: inline-flex; gap: 3px; }
+.form i { width: 16px; height: 16px; border-radius: 4px; font: 700 .6rem var(--body); font-style: normal; display: grid; place-items: center; color: var(--surface); }
+.form i.w { background: var(--win); } .form i.l { background: var(--loss); }
+.delta { font-weight: 600; font-size: .9rem; }
+.delta.up { color: var(--win); } .delta.down { color: var(--loss); } .delta.flat { color: var(--muted); }
+.pill { display: inline-block; font: 600 .7rem var(--body); letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; }
+.pill.w { color: var(--win); } .pill.l { color: var(--loss); } .pill.m { color: var(--muted); }
+
+/* spotlight (this week) */
+.spot { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.spot .card { padding: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.spot .lab { font: 600 .68rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.spot .big { font: 700 1.6rem var(--display); line-height: 1; }
+.spot .big .delta { font-size: inherit; }
+.spot .plink { min-width: 0; max-width: 100%; }
+.spot .plink .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* forms */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: var(--surface); gap: 3px; }
+.seg button { font: 600 .85rem var(--body); border: 0; background: none; color: var(--muted); padding: 7px 14px; border-radius: 7px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.teams { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; }
+.vs { font-family: var(--display); font-size: 1.2rem; color: var(--muted); padding-top: 32px; }
+.team { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.label { font: 600 .7rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+select, input[type="text"], input[type="date"] { width: 100%; min-width: 0; font: 500 1rem var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.score { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border: 2px solid var(--line); border-radius: 14px; background: var(--surface-2); min-width: 0; }
+.score.lead { border-color: var(--win); background: var(--win-soft); }
+.score-who { font-weight: 600; font-size: .85rem; text-align: center; overflow-wrap: anywhere; color: var(--muted); }
+.score.lead .score-who { color: var(--win); }
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper button { width: 40px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 1.3rem var(--body); cursor: pointer; touch-action: manipulation; }
+.stepper input { width: 3.2ch; min-width: 0; border: 0; background: none; padding: 0; text-align: center; font: 700 2.5rem var(--display); color: var(--ink); font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row > .grow { flex: 1 1 160px; min-width: 0; }
+label.f { display: flex; flex-direction: column; gap: 6px; }
+.btn { font: 600 1rem var(--body); padding: 12px 18px; border-radius: 10px; border: 1px solid transparent; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.ghost { background: none; color: var(--ink); border-color: var(--line); }
+.btn.small { font-size: .8rem; padding: 6px 11px; border-radius: 8px; }
+.btn.danger { background: var(--loss); color: #fff; }
+.btn.link-danger { background: none; color: var(--loss); border-color: transparent; padding-inline: 4px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.actions .btn.primary { flex: 1 1 180px; }
+.msg { min-height: 1.3em; font-size: .9rem; margin: 0; }
+.msg.err { color: var(--loss); } .msg.ok { color: var(--win); }
+.editing-tag { display: inline-flex; align-items: center; gap: 6px; font: 600 .72rem var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--even); }
+
+/* chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 600 .88rem var(--body); padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.chip.off { opacity: .4; }
+.swatch { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+
+/* charts */
+.chart { width: 100%; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { fill: var(--muted); font: 500 11px var(--body); }
+.grid line { stroke: var(--line); }
+
+/* match list */
+.mweek { font: 600 .7rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 14px 16px 4px; }
+.mitem { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); align-items: center; }
+.mitem:last-child { border-bottom: 0; }
+.mitem .who { min-width: 0; overflow-wrap: anywhere; }
+.mitem .who b { font-weight: 700; }
+.mitem .sc { font: 700 1.15rem var(--display); }
+.mitem .meta { color: var(--muted); font-size: .8rem; grid-column: 1; }
+.mitem .act { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 8px; align-items: center; }
+.res { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font: 700 .7rem var(--body); color: #fff; margin-right: 8px; vertical-align: 1px; }
+.res.w { background: var(--win); } .res.l { background: var(--loss); }
+
+/* player cards */
+.pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.pcard { display: flex; flex-direction: column; gap: 10px; text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s; }
+.pcard:hover { border-color: var(--accent); }
+.pcard .top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pcard .nm { font-weight: 700; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard .rk { color: var(--muted); font-size: .8rem; }
+.pcard .stats { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; }
+.pcard .rating { font-size: 1.6rem; line-height: 1; }
+.pcard svg { width: 90px; height: 30px; }
+
+/* profile */
+.back { align-self: flex-start; background: none; border: 0; color: var(--muted); font: 600 .85rem var(--body); cursor: pointer; padding: 4px 0; }
+.back:hover { color: var(--ink); }
+.hero { display: flex; flex-direction: column; gap: 16px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: var(--on-brand); border: 0; }
+.hero .who { display: flex; align-items: center; gap: 14px; }
+.hero .avatar { --size: 60px; box-shadow: 0 0 0 3px rgba(255,255,255,.2); }
+.hero h2 { font-size: 2rem; }
+.hero .sub { color: var(--on-brand-muted); margin: 4px 0 0; font-size: .9rem; }
+.tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.tile { background: rgba(255,255,255,.07); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.tile .lab { font: 600 .66rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--on-brand-muted); }
+.tile .val { font: 700 1.55rem var(--display); line-height: 1.1; white-space: nowrap; }
+.tile .val small { font-size: .8rem; font-family: var(--body); font-weight: 600; color: var(--on-brand-muted); margin-left: 3px; }
+.tile .val.up { color: var(--ball); } .tile .val.down { color: #ffb4a6; }
+.match3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mu { display: flex; flex-direction: column; gap: 4px; }
+.mu h3 { margin-bottom: 6px; }
+.murow { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 0; }
+.murow .bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--loss-soft); overflow: hidden; }
+.murow .bar span { display: block; height: 100%; background: var(--win); }
+.murow .rec { font-size: .82rem; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .match3 { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .teams { grid-template-columns: 1fr; }
+  .vs { padding-top: 0; text-align: center; }
+  .hide-sm { display: none; }
+  .spot { gap: 8px; }
+  .spot .card { padding: 10px; }
+  .spot .big { font-size: 1.3rem; }
+  .spot .avatar { display: none; }
+  .brand .sub { display: none; }
+  nav.tabs .wrap { gap: 2px; }
+  nav.tabs button { padding: 8px 9px; font-size: .74rem; letter-spacing: .04em; }
+  td, th { padding-inline: 6px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#ladder" aria-label="Badminton Courtside home">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <rect width="64" height="64" rx="16" fill="#ffffff" fill-opacity=".08"/>
+        <rect x="11" y="38" width="11" height="15" rx="2.5" fill="#ffffff" opacity=".5"/>
+        <rect x="26.5" y="29" width="11" height="24" rx="2.5" fill="#ffffff" opacity=".78"/>
+        <rect x="42" y="21" width="11" height="32" rx="2.5" fill="#ffffff"/>
+        <path d="M13 31 Q 24 9 40 11" fill="none" stroke="#d7ff3a" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="0.1 5.2"/>
+        <circle cx="47.5" cy="12" r="5.5" fill="#d7ff3a"/>
+      </svg>
+      <div>
+        <h1><span class="eyebrow">Badminton</span>Courtside</h1>
+        <p class="sub" id="summary">Loading results…</p>
+      </div>
+    </a>
+    <form class="lock" id="lockForm" novalidate>
+      <input type="password" id="pinInput" placeholder="Team PIN" autocomplete="current-password" aria-label="Team PIN">
+      <button class="btn small" type="submit" id="unlockBtn">Unlock</button>
+    </form>
+    <div class="lock" id="unlockedBar" hidden>
+      <span class="state">Editing on</span>
+      <button class="btn small ghost" type="button" id="lockBtn">Lock</button>
+    </div>
+  </div>
+  <div class="wrap"><p class="lockmsg" id="lockMsg" role="status"></p></div>
+</header>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="wrap" role="tablist">
+    <button role="tab" data-tab="ladder" aria-selected="true">Ladder</button>
+    <button role="tab" data-tab="players" aria-selected="false">Players</button>
+    <button role="tab" data-tab="matches" aria-selected="false">Matches</button>
+    <button role="tab" data-tab="charts" aria-selected="false">Charts</button>
+    <span class="spacer"></span>
+    <button role="tab" data-tab="log" aria-selected="false" class="cta">+ Log<span class="hide-sm"> match</span></button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="banner" id="status" hidden></div>
+
+  <!-- LADDER -->
+  <section class="panel" id="tab-ladder">
+    <div class="block">
+      <div class="block-head"><h2 id="spotTitle">This week</h2><span class="hint" id="spotRange"></span></div>
+      <div id="spotlight"></div>
+    </div>
+    <div class="block">
+      <div class="block-head"><h2>Standings</h2><span class="hint">Tap a player for their profile</span></div>
+      <div class="card flush" id="standings"></div>
+      <details class="about"><summary>How ratings work</summary>
+        <p class="hint">Everyone starts at 1000. Beating a stronger side earns more than beating a weaker one, and a big win moves the rating more than a close one (21–10 counts about 40% more than 21–19). In doubles both partners gain or lose the same amount. “Week” is the change since Monday.</p>
+      </details>
+    </div>
+    <div class="block">
+      <h2>Best partnerships</h2>
+      <div class="card flush" id="pairs"></div>
+    </div>
+  </section>
+
+  <!-- PLAYERS -->
+  <section class="panel" id="tab-players" hidden>
+    <div id="playersList" class="panel">
+      <div class="block">
+        <div class="block-head"><h2>Players</h2><span class="hint" id="playersCount"></span></div>
+        <div class="pgrid" id="roster"></div>
+      </div>
+      <form id="playerForm" class="block card" novalidate>
+        <h2>Add a player</h2>
+        <div class="row">
+          <input class="grow" type="text" id="pname" placeholder="Name" autocomplete="off" maxlength="30" aria-label="Player name">
+          <button class="btn" type="submit" id="addPlayer">Add</button>
+        </div>
+        <p class="msg" id="playerMsg" role="status"></p>
+      </form>
+    </div>
+    <div id="profile" class="panel" hidden></div>
+  </section>
+
+  <!-- MATCHES -->
+  <section class="panel" id="tab-matches" hidden>
+    <div class="block">
+      <div class="block-head"><h2>Match log</h2><span class="hint" id="matchesHint"></span></div>
+      <div id="allMatches"></div>
+    </div>
+  </section>
+
+  <!-- CHARTS -->
+  <section class="panel" id="tab-charts" hidden>
+    <div class="block">
+      <h2>Rating over time</h2>
+      <p class="hint">Each step is a match that player played. Tap a name to hide or show their line.</p>
+      <div class="chips" id="legend"></div>
+      <div class="card chart" id="lineChart"></div>
+    </div>
+    <div class="block">
+      <div class="block-head"><h2>Wins and losses</h2>
+        <div class="seg" role="group" aria-label="Filter format" id="wlFilter">
+          <button type="button" data-f="all" aria-pressed="true">All</button>
+          <button type="button" data-f="doubles" aria-pressed="false">Doubles</button>
+          <button type="button" data-f="singles" aria-pressed="false">Singles</button>
+        </div>
+      </div>
+      <div class="card chart" id="wlChart"></div>
+    </div>
+  </section>
+
+  <!-- LOG / EDIT -->
+  <section class="panel" id="tab-log" hidden>
+    <form id="logForm" class="block card" novalidate>
+      <div class="block-head">
+        <div>
+          <span class="editing-tag" id="editTag" hidden>Editing a logged match</span>
+          <h2 id="logTitle">Log a match</h2>
+        </div>
+        <div class="seg" role="group" aria-label="Format" id="fmtSeg">
+          <button type="button" data-fmt="doubles" aria-pressed="true">Doubles</button>
+          <button type="button" data-fmt="singles" aria-pressed="false">Singles</button>
+        </div>
+      </div>
+      <div class="teams">
+        <div class="team">
+          <span class="label">Team A</span>
+          <select id="a1" aria-label="Team A player 1"></select>
+          <select id="a2" aria-label="Team A player 2" class="dbl"></select>
+        </div>
+        <div class="vs">VS</div>
+        <div class="team">
+          <span class="label">Team B</span>
+          <select id="b1" aria-label="Team B player 1"></select>
+          <select id="b2" aria-label="Team B player 2" class="dbl"></select>
+        </div>
+      </div>
+      <span class="label">Final score</span>
+      <div class="scores">
+        <div class="score" id="boxA">
+          <span class="score-who" id="whoA">Team A</span>
+          <div class="stepper">
+            <button type="button" data-step="sA" data-d="-1" aria-label="Team A minus one">−</button>
+            <input type="number" id="sA" inputmode="numeric" min="0" max="99" placeholder="0" aria-label="Team A points">
+            <button type="button" data-step="sA" data-d="1" aria-label="Team A plus one">+</button>
+          </div>
+        </div>
+        <div class="score" id="boxB">
+          <span class="score-who" id="whoB">Team B</span>
+          <div class="stepper">
+            <button type="button" data-step="sB" data-d="-1" aria-label="Team B minus one">−</button>
+            <input type="number" id="sB" inputmode="numeric" min="0" max="99" placeholder="0" aria-label="Team B points">
+            <button type="button" data-step="sB" data-d="1" aria-label="Team B plus one">+</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint" id="scoreHint">Type the points or use − and +. The higher score wins.</p>
+      <label class="f"><span class="label">Date</span><input type="date" id="mdate"></label>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="saveMatch">Save match</button>
+        <button class="btn ghost" type="button" id="cancelEdit" hidden>Cancel</button>
+        <span id="delWrap" hidden>
+          <button class="btn link-danger" type="button" id="delMatch">Delete match</button>
+        </span>
+      </div>
+      <p class="msg" id="logMsg" role="status"></p>
+    </form>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+const START = 1000, K = 32;
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const COLORS = ["--c1", "--c2", "--c3", "--c4", "--c5", "--c6", "--c7", "--c8"];
+
+let sb = null, pin = "", canWrite = false;
+let players = [], matches = [];
+let logFmt = "doubles", wlFilter = "all";
+let hidden = new Set();
+let editingId = null, confirmDel = false;
+let tab = "ladder", profileId = null;
+let S = null; // computed stats
+let loaded = false;
+
+function ymd(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+function today() { return ymd(new Date()); }
+// Weeks run Monday to Sunday; a week is keyed by its Monday.
+function weekOf(s) { const d = new Date((s || today()) + "T00:00:00"); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return ymd(d); }
+function weekEnd(wk) { const d = new Date(wk + "T00:00:00"); d.setDate(d.getDate() + 6); return ymd(d); }
+function pName(id) { const p = players.find(p => p.id === id); return p ? p.name : "Removed player"; }
+function pColor(id) { const i = players.findIndex(p => p.id === id); return `var(${COLORS[(i < 0 ? 0 : i) % COLORS.length]})`; }
+function initials(name) { return name.trim().split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase(); }
+function avatar(id, size) { return `<span class="avatar" style="background:${pColor(id)}${size ? `;--size:${size}px` : ""}" aria-hidden="true">${esc(initials(pName(id)))}</span>`; }
+function teamName(ids) { return ids.map(pName).join(" & "); }
+function expected(ra, rb) { return 1 / (1 + Math.pow(10, (rb - ra) / 400)); }
+function pairKey(a, b) { return [a, b].sort().join("|"); }
+function fmtDate(s) { const d = new Date(s + "T00:00:00"); return isNaN(d) ? s : d.toLocaleDateString(undefined, { day: "numeric", month: "short" }); }
+function fmtRange(wk) { return `${fmtDate(wk)} – ${fmtDate(weekEnd(wk))}`; }
+function signed(n) { const r = Math.round(n); return r > 0 ? "+" + r : r < 0 ? "−" + Math.abs(r) : "±0"; }
+function deltaSpan(n) { const r = Math.round(n); return `<span class="delta num ${r > 0 ? "up" : r < 0 ? "down" : "flat"}">${signed(n)}</span>`; }
+function pct(w, l) { return w + l ? Math.round(100 * w / (w + l)) + "%" : "–"; }
+// Win rate pulled toward 50% so a 1–0 record doesn't outrank 8–2.
+function smoothed(r) { return (r.w + 1) / (r.w + r.l + 2); }
+
+// Margin as a share of the winner's points, so it works for games to 11, 15 or 21.
+// 21-19 → ×0.82, 21-15 → ×0.96, 21-10 → ×1.14, 21-0 → ×1.5. Matches without a score count ×1.
+function marginFactor(m) {
+  if (!Number.isFinite(m.scoreA) || !Number.isFinite(m.scoreB)) return 1;
+  const hi = Math.max(m.scoreA, m.scoreB), lo = Math.min(m.scoreA, m.scoreB);
+  if (hi <= 0) return 1;
+  return 0.75 + 0.75 * (hi - lo) / hi;
+}
+
+// ---------- stats: replay every match in date order ----------
+function compute() {
+  const ordered = matches.slice().sort((x, y) => (x.date || "").localeCompare(y.date || "") || (x.createdAt || 0) - (y.createdAt || 0));
+  const elo = {}, st = {}, hist = {}, pairs = {}, weeks = {}, vs = {}, mates = {}, games = {};
+  const ensure = id => {
+    if (id in elo) return;
+    elo[id] = START; hist[id] = [{ x: 0, y: START }]; weeks[id] = {}; vs[id] = {}; mates[id] = {}; games[id] = [];
+    st[id] = { w: 0, l: 0, sw: 0, sl: 0, dw: 0, dl: 0, form: [], peak: START };
+  };
+  players.forEach(p => ensure(p.id));
+  ordered.forEach((m, i) => {
+    const a = m.a || [], b = m.b || [];
+    [...a, ...b].forEach(ensure);
+    const ra = a.reduce((s, id) => s + elo[id], 0) / a.length;
+    const rb = b.reduce((s, id) => s + elo[id], 0) / b.length;
+    const sa = m.winner === "a" ? 1 : 0;
+    const d = K * marginFactor(m) * (sa - expected(ra, rb));
+    m._delta = Math.round(Math.abs(d));
+    m._week = weekOf(m.date);
+    const dbl = a.length > 1;
+    for (const [team, opp, sign, won, pf, pa] of [[a, b, 1, sa === 1, m.scoreA, m.scoreB], [b, a, -1, sa === 0, m.scoreB, m.scoreA]]) {
+      for (const id of team) {
+        const wk = weeks[id][m._week] = weeks[id][m._week] || { w: 0, l: 0, pf: 0, pa: 0, start: elo[id], end: elo[id] };
+        elo[id] += sign * d;
+        const s = st[id];
+        won ? s.w++ : s.l++;
+        if (dbl) won ? s.dw++ : s.dl++; else won ? s.sw++ : s.sl++;
+        s.form.push(won ? "w" : "l");
+        s.peak = Math.max(s.peak, elo[id]);
+        won ? wk.w++ : wk.l++;
+        wk.pf += pf || 0; wk.pa += pa || 0; wk.end = elo[id];
+        hist[id].push({ x: i + 1, y: elo[id], date: m.date });
+        games[id].push({ m, won, change: sign * d, after: elo[id] });
+        for (const o of opp) { const r = vs[id][o] = vs[id][o] || { w: 0, l: 0 }; won ? r.w++ : r.l++; }
+        for (const t of team) if (t !== id) { const r = mates[id][t] = mates[id][t] || { w: 0, l: 0 }; won ? r.w++ : r.l++; }
+      }
+      if (dbl && team.length === 2) {
+        const k = pairKey(team[0], team[1]);
+        pairs[k] = pairs[k] || { ids: team.slice(), w: 0, l: 0 };
+        won ? pairs[k].w++ : pairs[k].l++;
+      }
+    }
+  });
+  const ranked = players.map(p => p.id).sort((x, y) => elo[y] - elo[x] || (st[y].w - st[y].l) - (st[x].w - st[x].l));
+  S = { ordered, elo, st, hist, pairs, weeks, vs, mates, games, ranked, n: ordered.length };
+}
+
+function streak(form) {
+  if (!form.length) return null;
+  const last = form[form.length - 1];
+  let n = 0;
+  for (let i = form.length - 1; i >= 0 && form[i] === last; i--) n++;
+  return { kind: last, n };
+}
+
+// ---------- render ----------
+function renderAll() {
+  compute();
+  const total = matches.length;
+  $("#summary").textContent = players.length
+    ? `${players.length} players · ${total} match${total === 1 ? "" : "es"}`
+    : "Add your players to start the ladder";
+  renderSpotlight(); renderStandings(); renderPairs();
+  renderRoster(); renderProfile(); renderMatchLog();
+  renderLogSelects(); renderCharts(); renderEditState();
+}
+
+function emptyPlayers() {
+  if (!loaded) return `<p class="hint">Loading players…</p>`;
+  return `<div class="empty"><strong>No players yet</strong>Add your regulars on the Players tab, then log your first match.</div>`;
+}
+function playerLink(id, size) {
+  return `<button type="button" class="plink pname" data-player="${id}">${avatar(id, size)}<span class="nm">${esc(pName(id))}</span></button>`;
+}
+
+function renderSpotlight() {
+  const el = $("#spotlight");
+  if (!S.n) { $("#spotRange").textContent = ""; el.innerHTML = !loaded ? `<p class="hint">Loading…</p>` : `<div class="empty"><strong>No matches yet</strong>The week's top movers show up here once games are logged.</div>`; return; }
+  // the current week if anyone played, otherwise the most recent week with games
+  const wk = S.ordered[S.n - 1]._week;
+  const isNow = wk === weekOf(today());
+  $("#spotTitle").textContent = isNow ? "This week" : "Last active week";
+  $("#spotRange").textContent = fmtRange(wk);
+  const rows = players.map(p => ({ id: p.id, w: S.weeks[p.id][wk] })).filter(r => r.w);
+  const byGain = rows.slice().sort((x, y) => (y.w.end - y.w.start) - (x.w.end - x.w.start));
+  const byWins = rows.slice().sort((x, y) => y.w.w - x.w.w || smoothed(y.w) - smoothed(x.w));
+  const played = S.ordered.filter(m => m._week === wk).length;
+  const top = byGain[0], wins = byWins[0];
+  el.innerHTML = `<div class="spot">
+    <div class="card"><span class="lab">Top mover</span><span class="big">${deltaSpan(top.w.end - top.w.start)}</span>${playerLink(top.id, 22)}</div>
+    <div class="card"><span class="lab">Most wins</span><span class="big num">${wins.w.w}–${wins.w.l}</span>${playerLink(wins.id, 22)}</div>
+    <div class="card"><span class="lab">Matches played</span><span class="big num">${played}</span><span class="hint">${rows.length} player${rows.length === 1 ? "" : "s"} on court</span></div>
+  </div>`;
+}
+
+function renderStandings() {
+  const el = $("#standings");
+  if (!players.length) { el.innerHTML = emptyPlayers(); el.classList.remove("card"); return; }
+  el.classList.add("card");
+  const wk = weekOf(today());
+  el.innerHTML = `<div class="table-scroll"><table class="num">
+    <thead><tr><th></th><th>Player</th><th class="r">Rating</th><th class="r">Week</th><th class="r">W–L</th><th class="r hide-sm">Win %</th><th class="hide-sm">Last 5</th></tr></thead>
+    <tbody>${S.ranked.map((id, i) => {
+      const s = S.st[id], w = S.weeks[id][wk];
+      const last = s.form.slice(-5).map(f => `<i class="${f}">${f.toUpperCase()}</i>`).join("");
+      return `<tr class="link ${i === 0 && s.w + s.l ? "top1" : ""}" data-player="${id}"><td class="rank">${i + 1}</td>
+        <td>${playerLink(id)}</td>
+        <td class="r rating">${Math.round(S.elo[id])}</td>
+        <td class="r">${w ? deltaSpan(w.end - w.start) : '<span class="hint">–</span>'}</td>
+        <td class="r">${s.w}–${s.l}</td>
+        <td class="r hide-sm">${pct(s.w, s.l)}</td>
+        <td class="hide-sm"><span class="form">${last || '<span class="hint">no games</span>'}</span></td></tr>`;
+    }).join("")}</tbody></table></div>`;
+}
+
+function renderPairs() {
+  const el = $("#pairs");
+  const list = Object.values(S.pairs).filter(p => p.ids.every(id => players.some(x => x.id === id)))
+    .sort((x, y) => smoothed(y) - smoothed(x) || (y.w + y.l) - (x.w + x.l));
+  if (!list.length) { el.innerHTML = `<p class="hint" style="padding:12px 16px">Partnerships show up here after your first doubles match.</p>`; return; }
+  el.innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>Pair</th><th class="r">W–L</th><th class="r">Win %</th></tr></thead><tbody>${
+    list.slice(0, 6).map(p => `<tr><td>${esc(teamName(p.ids))}</td><td class="r">${p.w}–${p.l}</td><td class="r">${pct(p.w, p.l)}</td></tr>`).join("")
+  }</tbody></table></div>`;
+}
+
+function sparkline(id) {
+  const pts = S.hist[id].slice(-16);
+  if (pts.length < 2) return `<svg viewBox="0 0 90 30" aria-hidden="true"><line x1="0" x2="90" y1="15" y2="15" stroke="var(--line)" stroke-width="2" stroke-dasharray="3 3"/></svg>`;
+  const ys = pts.map(p => p.y), lo = Math.min(...ys), hi = Math.max(...ys), span = Math.max(hi - lo, 10);
+  const d = pts.map((p, i) => `${i ? "L" : "M"}${(i / (pts.length - 1) * 88 + 1).toFixed(1)},${(27 - (p.y - lo) / span * 24).toFixed(1)}`).join(" ");
+  const up = ys[ys.length - 1] >= ys[0];
+  return `<svg viewBox="0 0 90 30" aria-hidden="true"><path d="${d}" fill="none" stroke="var(${up ? "--win" : "--loss"})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+function renderRoster() {
+  const el = $("#roster");
+  $("#playersCount").textContent = players.length ? `${players.length} on the roster` : "";
+  $("#playerForm").hidden = !canWrite;
+  if (!players.length) { el.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>Nobody on the roster yet</strong>${canWrite ? "Add your regulars below." : "Unlock with the team PIN to add players."}</div>`; return; }
+  el.innerHTML = S.ranked.map((id, i) => {
+    const s = S.st[id];
+    return `<button type="button" class="card pcard" data-player="${id}">
+      <div class="top">${avatar(id, 38)}<div style="min-width:0"><div class="nm">${esc(pName(id))}</div><div class="rk num">#${i + 1} · ${s.w}–${s.l} · ${pct(s.w, s.l)}</div></div></div>
+      <div class="stats"><span class="rating num">${Math.round(S.elo[id])}</span>${sparkline(id)}</div>
+    </button>`;
+  }).join("");
+}
+
+// ---------- profile ----------
+function recordList(map, dir) {
+  return Object.entries(map).filter(([id]) => players.some(p => p.id === id))
+    .map(([id, r]) => ({ id, ...r, s: smoothed(r) }))
+    .sort((x, y) => dir * (y.s - x.s) || (y.w + y.l) - (x.w + x.l));
+}
+function muBlock(title, list, empty) {
+  return `<div class="card mu"><h3>${title}</h3>${list.length ? list.slice(0, 3).map(r => `<div class="murow">
+      ${playerLink(r.id, 22)}<span class="rec num">${r.w}–${r.l} · ${pct(r.w, r.l)}</span>
+      <div class="bar" aria-hidden="true"><span style="width:${Math.round(100 * r.w / (r.w + r.l))}%"></span></div>
+    </div>`).join("") : `<p class="hint">${empty}</p>`}</div>`;
+}
+
+function renderProfile() {
+  const el = $("#profile");
+  const show = tab === "players" && profileId && players.some(p => p.id === profileId);
+  $("#playersList").hidden = show; el.hidden = !show;
+  if (!show) return;
+  const id = profileId, s = S.st[id], rank = S.ranked.indexOf(id) + 1;
+  const g = s.w + s.l, sk = streak(s.form);
+  const wk = S.weeks[id][weekOf(today())];
+  const weekD = wk ? wk.end - wk.start : 0;
+  const since = players.find(p => p.id === id).createdAt;
+  const opp = recordList(S.vs[id], 1), mates = recordList(S.mates[id], 1);
+  const tough = recordList(S.vs[id], -1).filter(r => r.l > r.w);
+  const beats = opp.filter(r => r.w > r.l);
+  const rm = canWrite && g === 0 ? `<button class="btn small ghost" data-rmp="${id}" style="align-self:flex-start">Remove player</button>` : "";
+
+  el.innerHTML = `
+    <button type="button" class="back" data-goto="players">← All players</button>
+    <div class="card hero">
+      <div class="who">${avatar(id, 60)}<div><h2>${esc(pName(id))}</h2>
+        <p class="sub num">Rank #${rank} of ${players.length}${since ? ` · joined ${new Date(since).toLocaleDateString(undefined, { month: "short", year: "numeric" })}` : ""}</p></div></div>
+      <div class="tiles num">
+        <div class="tile"><div class="lab">Rating</div><div class="val">${Math.round(S.elo[id])}</div></div>
+        <div class="tile"><div class="lab">This week</div><div class="val ${weekD > 0.5 ? "up" : weekD < -0.5 ? "down" : ""}">${wk ? signed(weekD) : "–"}${wk ? `<small>${wk.w}–${wk.l}</small>` : ""}</div></div>
+        <div class="tile"><div class="lab">Record</div><div class="val">${s.w}–${s.l}<small>${pct(s.w, s.l)}</small></div></div>
+        <div class="tile"><div class="lab">Streak</div><div class="val ${sk ? (sk.kind === "w" ? "up" : "down") : ""}">${sk ? sk.kind.toUpperCase() + sk.n : "–"}</div></div>
+        <div class="tile"><div class="lab">Peak</div><div class="val">${Math.round(s.peak)}</div></div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="block-head"><h2>Week by week</h2><span class="hint">Rating change each week, with that week's record</span></div>
+      <div class="card chart" id="weekChart"></div>
+      <div class="card flush" id="weekTable"></div>
+    </div>
+
+    <div class="block">
+      <h2>Matchups</h2>
+      <div class="match3">
+        ${muBlock("Plays best against", beats, "No winning record against anyone yet.")}
+        ${muBlock("Best partners", mates.filter(r => r.w > 0), "No doubles wins yet.")}
+        ${muBlock("Toughest opponents", tough, g ? "Nobody has a winning record against them." : "No games yet.")}
+      </div>
+      <p class="hint">Doubles counts each opponent individually. Ties are broken by games played.</p>
+    </div>
+
+    <div class="block">
+      <h2>Recent matches</h2>
+      <div class="card flush">${g ? S.games[id].slice().reverse().slice(0, 10).map(x => matchRow(x.m, id, x)).join("") : `<p class="hint" style="padding:12px 16px">No matches yet.</p>`}</div>
+    </div>
+    ${rm}`;
+  drawWeekly(id);
+}
+
+function weekRows(id) {
+  return Object.entries(S.weeks[id]).sort(([a], [b]) => a.localeCompare(b)).map(([wk, r]) => ({ wk, ...r, d: r.end - r.start }));
+}
+
+function drawWeekly(id) {
+  const el = $("#weekChart"), tbl = $("#weekTable");
+  if (!el) return;
+  const rows = weekRows(id);
+  if (!rows.length) { el.innerHTML = `<div class="empty"><strong>No weeks yet</strong>Each week they play adds a bar here.</div>`; tbl.hidden = true; return; }
+  tbl.hidden = false;
+  const show = rows.slice(-12);
+  const W = Math.max(300, Math.round(el.clientWidth - 34 || 600)), H = 220;
+  const m = { l: 34, r: 8, t: 22, b: 40 };
+  const max = Math.max(10, ...show.map(r => Math.abs(r.d)));
+  const step = max <= 20 ? 10 : max <= 50 ? 25 : 50, top = Math.ceil(max / step) * step;
+  const sy = v => m.t + (1 - (v + top) / (2 * top)) * (H - m.t - m.b);
+  const bw = (W - m.l - m.r) / show.length, barW = Math.min(36, bw * 0.6);
+  let s = `<g class="grid">`;
+  for (let v = -top; v <= top; v += step) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(v)}" y2="${sy(v)}"${v === 0 ? ' style="stroke:var(--muted)"' : ""}/><text x="${m.l - 6}" y="${sy(v) + 4}" text-anchor="end">${v > 0 ? "+" + v : v}</text>`;
+  s += `</g>`;
+  const every = show.length > 8 ? 2 : 1;
+  show.forEach((r, i) => {
+    const cx = m.l + bw * i + bw / 2, y0 = sy(0), y1 = sy(r.d);
+    const up = r.d >= 0;
+    s += `<rect x="${cx - barW / 2}" y="${Math.min(y0, y1)}" width="${barW}" height="${Math.max(1.5, Math.abs(y1 - y0))}" rx="3" fill="var(${up ? "--win" : "--loss"})"><title>Week of ${fmtDate(r.wk)}: ${signed(r.d)} rating, ${r.w}–${r.l}</title></rect>`;
+    s += `<text x="${cx}" y="${up ? y1 - 6 : y1 + 14}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${signed(r.d)}</text>`;
+    if (i % every === (show.length - 1) % every) s += `<text x="${cx}" y="${H - 22}" text-anchor="middle">${fmtDate(r.wk)}</text>`;
+    s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" class="num">${r.w}–${r.l}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Rating change per week">${s}</svg>`;
+
+  tbl.innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>Week of</th><th class="r">Played</th><th class="r">W–L</th><th class="r hide-sm">Win %</th><th class="r hide-sm">Points ±</th><th class="r">Change</th><th class="r">Rating</th></tr></thead><tbody>${
+    rows.slice().reverse().map(r => `<tr><td>${fmtDate(r.wk)}</td><td class="r">${r.w + r.l}</td><td class="r">${r.w}–${r.l}</td><td class="r hide-sm">${pct(r.w, r.l)}</td>
+      <td class="r hide-sm">${signed(r.pf - r.pa)}</td><td class="r">${deltaSpan(r.d)}</td><td class="r">${Math.round(r.end)}</td></tr>`).join("")
+  }</tbody></table></div>`;
+}
+
+// ---------- match log ----------
+// pov: show the result from one player's side (profile); otherwise winner first
+function matchRow(m, pov, g) {
+  const onA = pov && m.a.includes(pov);
+  const wa = m.winner === "a";
+  const hasPts = Number.isFinite(m.scoreA) && Number.isFinite(m.scoreB);
+  let who, sc;
+  if (pov) {
+    const mine = onA ? m.a : m.b, theirs = onA ? m.b : m.a;
+    const mates = mine.filter(x => x !== pov);
+    who = `<span class="res ${g.won ? "w" : "l"}">${g.won ? "W" : "L"}</span>${mates.length ? `with ${esc(teamName(mates))} ` : ""}vs ${esc(teamName(theirs))}`;
+    sc = hasPts ? `${onA ? m.scoreA : m.scoreB}–${onA ? m.scoreB : m.scoreA}` : "";
+  } else {
+    const A = esc(teamName(m.a)), B = esc(teamName(m.b));
+    who = wa ? `<b>${A}</b> beat ${B}` : `<b>${B}</b> beat ${A}`;
+    sc = hasPts ? `${Math.max(m.scoreA, m.scoreB)}–${Math.min(m.scoreA, m.scoreB)}` : "";
+  }
+  const rating = pov ? deltaSpan(g.change) + " rating" : `±${m._delta} rating`;
+  const edit = canWrite ? `<button class="btn small ghost" data-edit="${m.id}">Edit</button>` : "";
+  return `<div class="mitem">
+    <div class="who">${who}</div>
+    <div class="act"><span class="sc num">${sc}</span>${edit}</div>
+    <div class="meta num">${fmtDate(m.date)} · ${m.a.length > 1 ? "Doubles" : "Singles"} · ${rating}</div>
+  </div>`;
+}
+
+function renderMatchLog() {
+  const el = $("#allMatches");
+  $("#matchesHint").textContent = canWrite ? "Tap Edit to fix a score, player or date" : "Unlock with the team PIN to edit";
+  if (!S.n) { el.innerHTML = `<div class="empty"><strong>No matches yet</strong>Use + Log match after your next game.</div>`; return; }
+  const byWeek = [];
+  S.ordered.slice().reverse().forEach(m => {
+    const last = byWeek[byWeek.length - 1];
+    if (last && last.wk === m._week) last.list.push(m); else byWeek.push({ wk: m._week, list: [m] });
+  });
+  el.innerHTML = byWeek.map(w => `<div class="card flush"><div class="mweek">Week of ${fmtRange(w.wk)} · ${w.list.length} match${w.list.length === 1 ? "" : "es"}</div>${w.list.map(m => matchRow(m)).join("")}</div>`).join("");
+}
+
+// ---------- log / edit form ----------
+function optionList(selected, exclude) {
+  return `<option value="">Choose player</option>` + players.map(p =>
+    `<option value="${p.id}" ${p.id === selected ? "selected" : ""} ${exclude.includes(p.id) && p.id !== selected ? "disabled" : ""}>${esc(p.name)}</option>`).join("");
+}
+
+function renderLogSelects() {
+  const ids = ["a1", "a2", "b1", "b2"];
+  const vals = ids.map(id => $("#" + id).value);
+  ids.forEach((id, i) => { $("#" + id).innerHTML = optionList(vals[i], vals.filter((v, j) => v && j !== i)); });
+  $$(".dbl").forEach(s => s.hidden = logFmt !== "doubles");
+  $("#saveMatch").disabled = players.length < 2;
+}
+
+function setFmt(f) {
+  logFmt = f;
+  $$("#fmtSeg button").forEach(x => x.setAttribute("aria-pressed", x.dataset.fmt === f));
+  renderLogSelects(); updateScoreUI();
+}
+
+function renderEditState() {
+  // the match being edited was deleted elsewhere
+  if (editingId && !matches.some(m => m.id === editingId)) stopEdit();
+  const on = !!editingId;
+  $("#editTag").hidden = !on; $("#cancelEdit").hidden = !on; $("#delWrap").hidden = !on || !canWrite;
+  $("#logTitle").textContent = on ? "Edit match" : "Log a match";
+  $("#saveMatch").textContent = on ? "Save changes" : "Save match";
+  $("#delMatch").textContent = confirmDel ? "Tap again to delete" : "Delete match";
+  $("#delMatch").classList.toggle("danger", confirmDel);
+  $("#delMatch").classList.toggle("link-danger", !confirmDel);
+}
+
+function startEdit(id) {
+  const m = matches.find(x => x.id === id);
+  if (!m) return;
+  editingId = id; confirmDel = false;
+  $("#logMsg").textContent = "";
+  logFmt = m.a.length > 1 ? "doubles" : "singles";
+  $$("#fmtSeg button").forEach(x => x.setAttribute("aria-pressed", x.dataset.fmt === logFmt));
+  ["a1", "a2", "b1", "b2"].forEach(x => $("#" + x).value = "");
+  // set values before rebuilding options so the selections survive
+  renderLogSelects();
+  $("#a1").value = m.a[0] || ""; $("#b1").value = m.b[0] || "";
+  $("#a2").value = m.a[1] || ""; $("#b2").value = m.b[1] || "";
+  renderLogSelects();
+  $("#sA").value = m.scoreA ?? ""; $("#sB").value = m.scoreB ?? "";
+  $("#mdate").value = m.date || today();
+  updateScoreUI(); renderEditState();
+  go("log");
+}
+
+function stopEdit() {
+  editingId = null; confirmDel = false;
+  ["a1", "a2", "b1", "b2"].forEach(x => $("#" + x).value = "");
+  $("#sA").value = ""; $("#sB").value = ""; $("#mdate").value = today();
+  renderLogSelects(); updateScoreUI(); renderEditState();
+}
+
+// ---------- charts (hand-drawn SVG) ----------
+function niceStep(range) { return range <= 80 ? 20 : range <= 200 ? 50 : 100; }
+
+function renderCharts() {
+  $("#legend").innerHTML = players.map(p => `<button type="button" class="chip ${hidden.has(p.id) ? "off" : ""}" data-leg="${p.id}" aria-pressed="${!hidden.has(p.id)}"><span class="swatch" style="background:${pColor(p.id)}"></span>${esc(p.name)}</button>`).join("");
+  if (tab === "charts") { drawLine(); drawWL(); }
+}
+
+function drawLine() {
+  const el = $("#lineChart");
+  if (!S.n) { el.innerHTML = `<div class="empty"><strong>No games to chart yet</strong>Each logged match adds a step to the lines here.</div>`; return; }
+  const W = Math.max(300, Math.round(el.clientWidth - 34 || 600)), H = Math.round(Math.min(320, Math.max(220, W * 0.55)));
+  const m = { l: 40, r: 12, t: 12, b: 26 };
+  const shown = players.filter(p => !hidden.has(p.id));
+  let ys = [START];
+  shown.forEach(p => S.hist[p.id].forEach(pt => ys.push(pt.y)));
+  const step = niceStep(Math.max(...ys) - Math.min(...ys));
+  const y0 = Math.floor((Math.min(...ys) - 5) / step) * step, y1 = Math.ceil((Math.max(...ys) + 5) / step) * step;
+  const sx = x => m.l + (x / S.n) * (W - m.l - m.r);
+  const sy = y => m.t + (1 - (y - y0) / (y1 - y0)) * (H - m.t - m.b);
+  let g = `<g class="grid">`;
+  for (let v = y0; v <= y1; v += step) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(v)}" y2="${sy(v)}" stroke-width="1"${v === START ? ' stroke-dasharray="4 4"' : ""}/><text x="${m.l - 6}" y="${sy(v) + 4}" text-anchor="end">${v}</text>`;
+  g += `</g>`;
+  const first = S.ordered[0].date, last = S.ordered[S.n - 1].date;
+  g += `<text x="${m.l}" y="${H - 6}">${fmtDate(first)}</text><text x="${W - m.r}" y="${H - 6}" text-anchor="end">${fmtDate(last)} · ${S.n} matches</text>`;
+  let lines = "";
+  shown.forEach(p => {
+    const pts = S.hist[p.id];
+    // step line: hold rating flat until the player's next match
+    let d = `M${sx(0)},${sy(pts[0].y)}`;
+    for (let i = 1; i < pts.length; i++) d += ` H${sx(pts[i].x)} V${sy(pts[i].y)}`;
+    d += ` H${sx(S.n)}`;
+    const end = pts[pts.length - 1];
+    lines += `<path d="${d}" fill="none" stroke="${pColor(p.id)}" stroke-width="2.25" stroke-linejoin="round"/>
+      <circle cx="${sx(S.n)}" cy="${sy(end.y)}" r="3.5" fill="${pColor(p.id)}"><title>${esc(p.name)}: ${Math.round(end.y)}</title></circle>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Rating of each player after every match">${g}${lines}</svg>`;
+}
+
+function drawWL() {
+  const el = $("#wlChart");
+  const rows = players.map(p => {
+    const s = S.st[p.id];
+    const w = wlFilter === "all" ? s.w : wlFilter === "doubles" ? s.dw : s.sw;
+    const l = wlFilter === "all" ? s.l : wlFilter === "doubles" ? s.dl : s.sl;
+    return { p, w, l };
+  }).sort((a, b) => (b.w - b.l) - (a.w - a.l) || b.w - a.w);
+  const max = Math.max(1, ...rows.map(r => Math.max(r.w, r.l)));
+  if (!rows.some(r => r.w + r.l)) { el.innerHTML = `<div class="empty"><strong>No ${wlFilter === "all" ? "" : wlFilter + " "}games yet</strong>Wins grow to the right, losses to the left.</div>`; return; }
+  const W = Math.max(300, Math.round(el.clientWidth - 34 || 600)), rowH = 30, nameW = Math.min(110, W * 0.28);
+  const H = rows.length * rowH + 24;
+  const mid = nameW + (W - nameW) / 2, half = (W - nameW) / 2 - 26;
+  let s = `<line x1="${mid}" x2="${mid}" y1="0" y2="${H - 20}" stroke="var(--line)"/>`;
+  s += `<text x="${mid - 6}" y="${H - 4}" text-anchor="end">← Losses</text><text x="${mid + 6}" y="${H - 4}">Wins →</text>`;
+  rows.forEach((r, i) => {
+    const y = i * rowH + 6, bh = rowH - 12;
+    const lw = half * r.l / max, ww = half * r.w / max;
+    const name = r.p.name.length > 12 ? r.p.name.slice(0, 11) + "…" : r.p.name;
+    s += `<text x="0" y="${y + bh / 2 + 4}" style="fill:var(--ink);font-weight:600">${esc(name)}</text>`;
+    s += `<rect x="${mid - lw}" y="${y}" width="${lw}" height="${bh}" rx="3" fill="var(--loss)"/>`;
+    s += `<rect x="${mid}" y="${y}" width="${ww}" height="${bh}" rx="3" fill="var(--win)"/>`;
+    s += `<text x="${mid - lw - 5}" y="${y + bh / 2 + 4}" text-anchor="end" class="num">${r.l}</text>`;
+    s += `<text x="${mid + ww + 5}" y="${y + bh / 2 + 4}" class="num">${r.w}</text>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Wins and losses per player">${s}</svg>`;
+}
+
+// ---------- routing: #ladder, #players, #player/<id>, #matches, #charts, #log ----------
+const TABS = ["ladder", "players", "matches", "charts", "log"];
+function go(hash) { if (location.hash.slice(1) === hash) route(); else location.hash = hash; }
+function route() {
+  const h = location.hash.slice(1);
+  profileId = null;
+  if (h.startsWith("player/")) { tab = "players"; profileId = h.slice(7); }
+  else tab = TABS.includes(h) ? h : "ladder";
+  $$("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === tab));
+  TABS.forEach(x => $("#tab-" + x).hidden = x !== tab);
+  if (S) { renderProfile(); if (tab === "charts") requestAnimationFrame(() => { drawLine(); drawWL(); }); }
+  try { localStorage.setItem("rl-tab", tab); } catch (e) {}
+}
+window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
+$("nav.tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-tab]");
+  if (!b) return;
+  if (b.dataset.tab === "log" && editingId) stopEdit();
+  go(b.dataset.tab);
+});
+
+// ---------- events ----------
+$$("#fmtSeg button").forEach(b => b.addEventListener("click", () => setFmt(b.dataset.fmt)));
+function readScore(id) { const v = $("#" + id).value.trim(); return v === "" ? null : Number(v); }
+function validPts(n) { return Number.isInteger(n) && n >= 0 && n <= 99; }
+function updateScoreUI() {
+  const a = readScore("sA"), b = readScore("sB");
+  const pick = id => $("#" + id).value;
+  const A = [pick("a1"), logFmt === "doubles" ? pick("a2") : ""].filter(Boolean);
+  const B = [pick("b1"), logFmt === "doubles" ? pick("b2") : ""].filter(Boolean);
+  $("#whoA").textContent = A.length ? teamName(A) : "Team A";
+  $("#whoB").textContent = B.length ? teamName(B) : "Team B";
+  const lead = a !== null && b !== null && a !== b ? (a > b ? "a" : "b") : null;
+  $("#boxA").classList.toggle("lead", lead === "a");
+  $("#boxB").classList.toggle("lead", lead === "b");
+  $("#scoreHint").textContent = lead ? `${lead === "a" ? $("#whoA").textContent : $("#whoB").textContent} win ${Math.max(a, b)}–${Math.min(a, b)}`
+    : a !== null && b !== null && a === b ? "Scores are level. One game needs a winner." : "Type the points or use − and +. The higher score wins.";
+}
+$$("[data-step]").forEach(b => b.addEventListener("click", () => {
+  const inp = $("#" + b.dataset.step);
+  const cur = Number(inp.value) || 0;
+  inp.value = Math.max(0, Math.min(99, cur + Number(b.dataset.d)));
+  updateScoreUI();
+}));
+["sA", "sB"].forEach(id => $("#" + id).addEventListener("input", updateScoreUI));
+["a1", "a2", "b1", "b2"].forEach(id => $("#" + id).addEventListener("change", () => { renderLogSelects(); updateScoreUI(); }));
+
+$("#logForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = $("#logMsg"); msg.className = "msg";
+  const a = [$("#a1").value, logFmt === "doubles" ? $("#a2").value : null].filter(x => x !== null);
+  const b = [$("#b1").value, logFmt === "doubles" ? $("#b2").value : null].filter(x => x !== null);
+  const all = [...a, ...b];
+  if (all.some(x => !x)) { msg.className = "msg err"; msg.textContent = `Choose ${all.length} players.`; return; }
+  if (new Set(all).size !== all.length) { msg.className = "msg err"; msg.textContent = "A player can only be on court once."; return; }
+  const sa = readScore("sA"), sb = readScore("sB");
+  if (sa === null || sb === null) { msg.className = "msg err"; msg.textContent = "Enter both scores."; return; }
+  if (!validPts(sa) || !validPts(sb)) { msg.className = "msg err"; msg.textContent = "Scores must be whole numbers from 0 to 99."; return; }
+  if (sa === sb) { msg.className = "msg err"; msg.textContent = "Scores are level. Enter the final score with a winner."; return; }
+  if (!canWrite) { msg.className = "msg err"; msg.textContent = "Enter the team PIN at the top of the page to save matches."; $("#pinInput").focus(); return; }
+  const winner = sa > sb ? "a" : "b";
+  const args = { p_played_on: $("#mdate").value || today(), p_team_a: a, p_team_b: b, p_score_a: sa, p_score_b: sb };
+  $("#saveMatch").disabled = true;
+  try {
+    if (editingId) {
+      await rpc("update_match", { p_id: editingId, ...args });
+      stopEdit();
+      msg.className = "msg ok"; msg.textContent = `Updated: ${teamName(winner === "a" ? a : b)} won ${Math.max(sa, sb)}–${Math.min(sa, sb)}.`;
+    } else {
+      await rpc("add_match", args);
+      msg.className = "msg ok"; msg.textContent = `Saved: ${teamName(winner === "a" ? a : b)} won ${Math.max(sa, sb)}–${Math.min(sa, sb)}.`;
+      $("#sA").value = ""; $("#sB").value = ""; updateScoreUI();
+    }
+    reload();
+  } catch (err) { msg.className = "msg err"; msg.textContent = writeError(err); }
+  $("#saveMatch").disabled = players.length < 2;
+});
+
+$("#cancelEdit").addEventListener("click", () => { stopEdit(); $("#logMsg").textContent = ""; history.length > 1 ? history.back() : go("matches"); });
+$("#delMatch").addEventListener("click", async () => {
+  if (!confirmDel) { confirmDel = true; renderEditState(); return; }
+  const msg = $("#logMsg");
+  try {
+    await rpc("delete_match", { p_id: editingId });
+    stopEdit(); msg.className = "msg ok"; msg.textContent = "Match deleted.";
+    reload();
+  } catch (err) { msg.className = "msg err"; msg.textContent = writeError(err); confirmDel = false; renderEditState(); }
+});
+
+$("#playerForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const msg = $("#playerMsg"); msg.className = "msg";
+  const name = $("#pname").value.trim().slice(0, 30);
+  if (!name) { msg.className = "msg err"; msg.textContent = "Type a name first."; return; }
+  if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) { msg.className = "msg err"; msg.textContent = `${name} is already on the roster.`; return; }
+  if (!canWrite) { msg.className = "msg err"; msg.textContent = "Enter the team PIN at the top of the page to add players."; $("#pinInput").focus(); return; }
+  try {
+    await rpc("add_player", { p_name: name });
+    $("#pname").value = ""; msg.className = "msg ok"; msg.textContent = `Added ${name}.`;
+    reload();
+  } catch (err) { msg.className = "msg err"; msg.textContent = writeError(err); }
+});
+
+document.addEventListener("click", async e => {
+  const t = e.target.closest("[data-player],[data-goto],[data-edit],[data-leg],[data-rmp],#wlFilter button");
+  if (!t) return;
+  if (t.dataset.player) go("player/" + t.dataset.player);
+  else if (t.dataset.goto) go(t.dataset.goto);
+  else if (t.dataset.edit) startEdit(t.dataset.edit);
+  else if (t.dataset.leg) { hidden.has(t.dataset.leg) ? hidden.delete(t.dataset.leg) : hidden.add(t.dataset.leg); renderCharts(); drawLine(); }
+  else if (t.dataset.rmp) { try { await rpc("remove_player", { p_id: t.dataset.rmp }); go("players"); reload(); } catch (err) { setStatus(writeError(err)); } }
+  else if (t.closest("#wlFilter")) { wlFilter = t.dataset.f; $$("#wlFilter button").forEach(x => x.setAttribute("aria-pressed", x === t)); drawWL(); }
+});
+
+// ---------- Supabase ----------
+async function rpc(fn, args) {
+  const { data, error } = await sb.rpc(fn, { pin, ...args });
+  if (error) throw error;
+  return data;
+}
+function writeError(err) {
+  const m = (err && err.message) || "";
+  if (m.includes("wrong_pin")) { setLocked("That PIN no longer works. Ask your team for the current one."); return "The team PIN was changed. Unlock again to save."; }
+  if (m.includes("player_has_matches")) return "This player has matches logged, so they can't be removed.";
+  if (m.includes("duplicate_player")) return "A player can only be on court once.";
+  if (m.includes("unknown_player")) return "One of those players was removed. Reload and try again.";
+  if (m.includes("match_not_found")) return "That match was already deleted.";
+  if (m.includes("update_match") || (err && err.code === "PGRST202")) return "Editing isn't set up in the database yet. Run supabase/schema.sql again in Supabase.";
+  if (err && err.code === "23505") return "That name is already on the roster.";
+  return "Couldn't save. Check your connection and try again.";
+}
+function setStatus(t) { const s = $("#status"); s.textContent = t; s.hidden = !t; }
+function setLocked(note) {
+  pin = ""; canWrite = false;
+  try { localStorage.removeItem("rl-pin"); } catch (e) {}
+  $("#lockForm").hidden = false; $("#unlockedBar").hidden = true;
+  $("#lockMsg").textContent = note || "";
+  if (editingId) stopEdit();
+  renderAll();
+}
+function setUnlocked(p) {
+  pin = p; canWrite = true;
+  try { localStorage.setItem("rl-pin", p); } catch (e) {}
+  $("#lockForm").hidden = true; $("#unlockedBar").hidden = false;
+  $("#lockMsg").textContent = ""; $("#pinInput").value = "";
+  renderAll();
+}
+$("#lockForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const p = $("#pinInput").value.trim(), lm = $("#lockMsg");
+  if (!p || !sb) return;
+  $("#unlockBtn").disabled = true; lm.textContent = "";
+  const { data, error } = await sb.rpc("check_pin", { pin: p });
+  $("#unlockBtn").disabled = false;
+  if (error) { lm.textContent = "Couldn't check the PIN. Check your connection."; return; }
+  if (data === true) setUnlocked(p); else lm.textContent = "That PIN isn't right.";
+});
+$("#lockBtn").addEventListener("click", () => setLocked());
+
+const toPlayer = r => ({ id: r.id, name: r.name, createdAt: Date.parse(r.created_at) });
+const toMatch = r => ({ id: r.id, date: r.played_on, createdAt: Date.parse(r.created_at), a: r.team_a, b: r.team_b, scoreA: r.score_a, scoreB: r.score_b, winner: r.winner });
+let reloading = null, reloadT;
+async function reload() {
+  if (reloading) return reloading;
+  reloading = (async () => {
+    const [p, m] = await Promise.all([
+      sb.from("players").select("id,name,created_at").order("created_at"),
+      sb.from("matches").select("id,played_on,created_at,team_a,team_b,score_a,score_b,winner").limit(10000),
+    ]);
+    if (p.error || m.error) { setStatus("Couldn't load results. Check your connection and reload."); return; }
+    setStatus("");
+    players = p.data.map(toPlayer);
+    matches = m.data.map(toMatch);
+    loaded = true;
+    renderAll();
+  })();
+  try { await reloading; } finally { reloading = null; }
+}
+function scheduleReload() { clearTimeout(reloadT); reloadT = setTimeout(reload, 250); }
+
+let resizeT; window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => {
+  if (tab === "charts") { drawLine(); drawWL(); }
+  if (profileId) drawWeekly(profileId);
+}, 150); });
+
+// ---------- boot ----------
+$("#mdate").value = today();
+if (!location.hash) { let t = "ladder"; try { t = localStorage.getItem("rl-tab") || t; } catch (e) {} if (TABS.includes(t) && t !== "log") history.replaceState(null, "", "#" + t); }
+route();
+renderAll();
+$("#summary").textContent = "Loading results…";
+
+(async () => {
+  const cfg = window.RL_CONFIG || {};
+  if (!window.supabase || !cfg.supabaseUrl || !cfg.supabaseAnonKey || cfg.supabaseUrl.includes("YOUR-")) {
+    setStatus("Not connected yet: add your Supabase URL and anon key to config.js.");
+    $("#summary").textContent = "Results unavailable";
+    return;
+  }
+  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { persistSession: false } });
+  let saved = "";
+  try { saved = localStorage.getItem("rl-pin") || ""; } catch (e) {}
+  if (saved) { pin = saved; canWrite = true; $("#lockForm").hidden = true; $("#unlockedBar").hidden = false; }
+  await reload();
+  sb.channel("courtside")
+    .on("postgres_changes", { event: "*", schema: "public", table: "players" }, scheduleReload)
+    .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, scheduleReload)
+    .subscribe();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) scheduleReload(); });
+})();
+</script>
+</body>
+</html>
