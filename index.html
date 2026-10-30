@@ -208,6 +208,20 @@ label.f { display: flex; flex-direction: column; gap: 6px; }
 .murow .bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--loss-soft); overflow: hidden; }
 .murow .bar span { display: block; height: 100%; background: var(--win); }
 .murow .rec { font-size: .82rem; color: var(--muted); }
+.pnav { display: flex; align-items: center; gap: 10px; }
+.pnav span { font-weight: 600; flex: 1; text-align: center; }
+.pnav .btn { font-size: 1.1rem; padding: 4px 14px; }
+.statrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stat { padding: 12px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat .lab { font: 600 .66rem var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.stat .big { font: 700 1.45rem var(--display); line-height: 1.1; }
+.stat .big .delta { font-size: inherit; }
+.legend-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: .8rem; }
+.legend-line .k { display: inline-block; width: 16px; height: 0; margin-left: 6px; }
+.legend-line .k.bar { height: 10px; width: 10px; border-radius: 2px; background: linear-gradient(90deg, var(--win) 50%, var(--loss) 50%); }
+.legend-line .k.run { border-top: 2px solid var(--ink); }
+.legend-line .k.fit { border-top: 2px dashed var(--muted); }
+@media (max-width: 640px) { .statrow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 @media (max-width: 640px) {
   .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -635,9 +649,20 @@ function renderProfile() {
     </div>
 
     <div class="block">
-      <div class="block-head"><h2>Week by week</h2><span class="hint">Rating change each week, with that week's record</span></div>
-      <div class="card chart" id="weekChart"></div>
-      <div class="card flush" id="weekTable"></div>
+      <div class="block-head"><h2>Performance</h2>
+        <div class="seg" role="group" aria-label="Period" id="periodSeg">
+          <button type="button" data-period="week">Week</button><button type="button" data-period="month">Month</button><button type="button" data-period="life">Lifetime</button>
+        </div>
+      </div>
+      <div class="pnav" id="periodNav">
+        <button type="button" class="btn small ghost" id="periodPrev" data-shift="-1" aria-label="Previous period">‹</button>
+        <span id="periodLabel" class="num"></span>
+        <button type="button" class="btn small ghost" id="periodNext" data-shift="1" aria-label="Next period">›</button>
+      </div>
+      <div class="statrow" id="trendRow"></div>
+      <div class="card chart" id="periodChart"></div>
+      <p class="hint legend-line"><span class="k bar"></span>Rating change per day or week <span class="k run"></span>Running total <span class="k fit"></span>Trend</p>
+      <div class="card flush" id="periodTable"></div>
     </div>
 
     <div class="block">
@@ -655,43 +680,149 @@ function renderProfile() {
       <div class="card flush">${g ? S.games[id].slice().reverse().slice(0, 10).map(x => matchRow(x.m, id, x)).join("") : `<p class="hint" style="padding:12px 16px">No matches yet.</p>`}</div>
     </div>
     ${rm}`;
-  drawWeekly(id);
+  drawPeriod(id);
 }
 
-function weekRows(id) {
-  return Object.entries(S.weeks[id]).sort(([a], [b]) => a.localeCompare(b)).map(([wk, r]) => ({ wk, ...r, d: r.end - r.start }));
+// ---------- performance by period: week (split by day), month and lifetime (split by week) ----------
+function addDays(s, n) { const d = new Date(s + "T00:00:00"); d.setDate(d.getDate() + n); return ymd(d); }
+function weekKeys(from, to) { const out = []; for (let k = weekOf(from); k <= to; k = addDays(k, 7)) out.push(k); return out; }
+
+function periodRange(id, period, offset) {
+  const t = today();
+  if (period === "week") {
+    const from = addDays(weekOf(t), 7 * offset), to = addDays(from, 6);
+    return { from, to, unit: "day", keys: [0, 1, 2, 3, 4, 5, 6].map(i => addDays(from, i)), keyOf: d => d,
+      tick: k => new Date(k + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }),
+      label: `${fmtDate(from)} – ${fmtDate(to)}${offset === 0 ? " · this week" : offset === -1 ? " · last week" : ""}` };
+  }
+  if (period === "month") {
+    const d = new Date(t + "T00:00:00"); d.setDate(1); d.setMonth(d.getMonth() + offset);
+    const from = ymd(d), to = ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+    // weeks that straddle the month only count the days inside it
+    return { from, to, unit: "week", keys: weekKeys(from, to), keyOf: weekOf,
+      tick: k => fmtDate(k < from ? from : k),
+      label: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }) + (offset === 0 ? " · this month" : "") };
+  }
+  const first = S.games[id].length ? S.games[id][0].m.date : t;
+  const keys = weekKeys(first, t);
+  return { from: weekOf(first), to: t, unit: "week", keys, keyOf: weekOf, tick: k => fmtDate(k),
+    label: `Since ${fmtDate(first)} · ${keys.length} week${keys.length === 1 ? "" : "s"}` };
 }
 
-function drawWeekly(id) {
-  const el = $("#weekChart"), tbl = $("#weekTable");
+function periodStats(id, R) {
+  const t = today(), idx = {};
+  const buckets = R.keys.map((k, i) => { idx[k] = i; return { k, w: 0, l: 0, pf: 0, pa: 0, d: 0 }; });
+  let start = START;
+  for (const x of S.games[id]) {
+    const date = x.m.date;
+    if (date < R.from) { start = x.after; continue; }
+    if (date > R.to) break;
+    const b = buckets[idx[R.keyOf(date)]];
+    if (!b) continue;
+    const onA = x.m.a.includes(id);
+    x.won ? b.w++ : b.l++;
+    b.pf += (onA ? x.m.scoreA : x.m.scoreB) || 0; b.pa += (onA ? x.m.scoreB : x.m.scoreA) || 0;
+    b.d += x.change;
+  }
+  // running total and rating at the end of each bucket; buckets after today stay empty
+  let cum = 0;
+  buckets.forEach(b => { b.future = b.k > t; cum += b.d; b.cum = cum; b.end = start + cum; });
+  const live = buckets.filter(b => !b.future);
+  const tot = buckets.reduce((a, b) => ({ w: a.w + b.w, l: a.l + b.l, pf: a.pf + b.pf, pa: a.pa + b.pa }), { w: 0, l: 0, pf: 0, pa: 0 });
+  // the trend starts at the bucket of the player's first ever game, so empty weeks before they joined don't flatter it
+  const first = S.games[id].length ? R.keyOf(S.games[id][0].m.date < R.from ? R.from : S.games[id][0].m.date) : null;
+  const from = first ? Math.max(0, live.findIndex(b => b.k >= first)) : 0;
+  return { buckets, live, start, net: cum, ...tot, trend: trendOf(live, from, R.unit, tot.w + tot.l) };
+}
+
+// Least-squares slope of the running rating total (starting from 0), in rating points per day or per week.
+function trendOf(live, from, unit, games) {
+  if (games < 2) return { kind: "none", why: "Not enough games" };
+  if (live.length - from < 2) return { kind: "none", why: `Needs 2+ ${unit}s` };
+  const pts = [[from, from ? live[from - 1].cum : 0], ...live.slice(from).map((b, i) => [from + i + 1, b.cum])];
+  const n = pts.length, mx = pts.reduce((s, p) => s + p[0], 0) / n, my = pts.reduce((s, p) => s + p[1], 0) / n;
+  const sxx = pts.reduce((s, p) => s + (p[0] - mx) ** 2, 0);
+  const slope = pts.reduce((s, p) => s + (p[0] - mx) * (p[1] - my), 0) / sxx;
+  const flat = unit === "day" ? 1.5 : 3;
+  return { kind: slope > flat ? "up" : slope < -flat ? "down" : "flat", slope, b0: my - slope * mx, x0: from };
+}
+
+let profPeriod = "week", profOffset = 0, profFor = null;
+try { profPeriod = localStorage.getItem("rl-period") || profPeriod; } catch (e) {}
+
+function drawPeriod(id) {
+  const el = $("#periodChart");
   if (!el) return;
-  const rows = weekRows(id);
-  if (!rows.length) { el.innerHTML = `<div class="empty"><strong>No weeks yet</strong>Each week they play adds a bar here.</div>`; tbl.hidden = true; return; }
-  tbl.hidden = false;
-  const show = rows.slice(-12);
-  const W = Math.max(300, Math.round(el.clientWidth - 34 || 600)), H = 220;
-  const m = { l: 34, r: 8, t: 22, b: 40 };
-  const max = Math.max(10, ...show.map(r => Math.abs(r.d)));
-  const step = max <= 20 ? 10 : max <= 50 ? 25 : 50, top = Math.ceil(max / step) * step;
-  const sy = v => m.t + (1 - (v + top) / (2 * top)) * (H - m.t - m.b);
-  const bw = (W - m.l - m.r) / show.length, barW = Math.min(36, bw * 0.6);
-  let s = `<g class="grid">`;
-  for (let v = -top; v <= top; v += step) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(v)}" y2="${sy(v)}"${v === 0 ? ' style="stroke:var(--muted)"' : ""}/><text x="${m.l - 6}" y="${sy(v) + 4}" text-anchor="end">${v > 0 ? "+" + v : v}</text>`;
-  s += `</g>`;
-  const every = show.length > 8 ? 2 : 1;
-  show.forEach((r, i) => {
-    const cx = m.l + bw * i + bw / 2, y0 = sy(0), y1 = sy(r.d);
-    const up = r.d >= 0;
-    s += `<rect x="${cx - barW / 2}" y="${Math.min(y0, y1)}" width="${barW}" height="${Math.max(1.5, Math.abs(y1 - y0))}" rx="3" fill="var(${up ? "--win" : "--loss"})"><title>Week of ${fmtDate(r.wk)}: ${signed(r.d)} rating, ${r.w}–${r.l}</title></rect>`;
-    s += `<text x="${cx}" y="${up ? y1 - 6 : y1 + 14}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${signed(r.d)}</text>`;
-    if (i % every === (show.length - 1) % every) s += `<text x="${cx}" y="${H - 22}" text-anchor="middle">${fmtDate(r.wk)}</text>`;
-    s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" class="num">${r.w}–${r.l}</text>`;
-  });
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Rating change per week">${s}</svg>`;
+  if (profFor !== id) { profFor = id; profOffset = 0; }
+  const R = periodRange(id, profPeriod, profOffset), P = periodStats(id, R);
+  $$("#periodSeg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.period === profPeriod));
+  $("#periodNav").hidden = profPeriod === "life";
+  $("#periodLabel").textContent = R.label;
+  const firstGame = S.games[id].length ? S.games[id][0].m.date : today();
+  $("#periodPrev").disabled = R.from <= firstGame;
+  $("#periodNext").disabled = profOffset >= 0;
 
-  tbl.innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>Week of</th><th class="r">Played</th><th class="r">W–L</th><th class="r hide-sm">Win %</th><th class="r hide-sm">Points ±</th><th class="r">Change</th><th class="r">Rating</th></tr></thead><tbody>${
-    rows.slice().reverse().map(r => `<tr><td>${fmtDate(r.wk)}</td><td class="r">${r.w + r.l}</td><td class="r">${r.w}–${r.l}</td><td class="r hide-sm">${pct(r.w, r.l)}</td>
-      <td class="r hide-sm">${signed(r.pf - r.pa)}</td><td class="r">${deltaSpan(r.d)}</td><td class="r">${Math.round(r.end)}</td></tr>`).join("")
+  // previous period of the same length, for comparison
+  let prev = null;
+  if (profPeriod !== "life") { const PR = periodRange(id, profPeriod, profOffset - 1); if (PR.to >= firstGame) prev = periodStats(id, PR); }
+  const per = R.unit === "day" ? "day" : "wk";
+  const T = P.trend;
+  const trendTxt = T.kind === "none" ? `<span class="pill m">${T.why}</span>`
+    : `<span class="pill ${T.kind === "up" ? "w" : T.kind === "down" ? "l" : "m"}">${T.kind === "up" ? "▲ Rising" : T.kind === "down" ? "▼ Falling" : "■ Steady"}</span> <span class="hint num">${signed(T.slope)}/${per}</span>`;
+  const g = P.w + P.l, pg = prev ? prev.w + prev.l : 0;
+  const wrDiff = g && pg ? Math.round(100 * P.w / g) - Math.round(100 * prev.w / pg) : null;
+  const unitName = profPeriod === "week" ? "week" : profPeriod === "month" ? "month" : "";
+  $("#trendRow").innerHTML = `
+    <div class="card stat"><span class="lab">Trend</span><span>${trendTxt}</span></div>
+    <div class="card stat"><span class="lab">Rating change</span><span class="big">${g ? deltaSpan(P.net) : "–"}</span><span class="hint num">${Math.round(P.start)} → ${Math.round(P.start + P.net)}</span></div>
+    <div class="card stat"><span class="lab">Record</span><span class="big num">${P.w}–${P.l}</span><span class="hint num">${pct(P.w, P.l)} won${wrDiff !== null ? ` · <span class="delta ${wrDiff > 0 ? "up" : wrDiff < 0 ? "down" : "flat"}">${wrDiff > 0 ? "▲" : wrDiff < 0 ? "▼" : ""}${Math.abs(wrDiff)} pts</span> vs last ${unitName}` : ""}</span></div>
+    <div class="card stat"><span class="lab">Points ±</span><span class="big num">${g ? signed(P.pf - P.pa) : "–"}</span><span class="hint num">${g ? `${(P.pf / g).toFixed(1)} for · ${(P.pa / g).toFixed(1)} against per game` : "no games"}</span></div>`;
+
+  if (!g) {
+    el.innerHTML = `<div class="empty"><strong>No games in this ${profPeriod === "life" ? "history" : unitName}</strong>${profPeriod === "week" ? "Each day they play adds a bar here." : "Each week they play adds a bar here."}</div>`;
+  } else {
+    const B = P.buckets;
+    const W = Math.max(300, Math.round(el.clientWidth - 34 || 600)), H = 240;
+    const m = { l: 38, r: 10, t: 22, b: 40 };
+    const bw = (W - m.l - m.r) / B.length, barW = Math.min(36, Math.max(3, bw * 0.6));
+    const fit = x => T.b0 + T.slope * x;
+    const vals = [0, ...B.map(b => b.d), ...P.live.map(b => b.cum)];
+    if (T.kind !== "none") vals.push(fit(T.x0), fit(P.live.length));
+    const lo = Math.min(...vals), hi = Math.max(...vals), span = Math.max(hi - lo, 20);
+    const step = span <= 40 ? 10 : span <= 100 ? 25 : span <= 250 ? 50 : 100;
+    const y0 = Math.floor(lo / step) * step, y1 = Math.ceil(hi / step) * step;
+    const top = y1 + step * 0.3, bot = y0 - step * 0.3; // headroom for value labels
+    const sy = v => m.t + (1 - (v - bot) / (top - bot)) * (H - m.t - m.b);
+    // x positions: 0 = start of period (left edge), i + 1 = centre of bucket i
+    const sx = x => x === 0 ? m.l : m.l + bw * (x - 1) + bw / 2;
+    let s = `<g class="grid">`;
+    for (let v = y0; v <= y1; v += step) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(v)}" y2="${sy(v)}"${v === 0 ? ' style="stroke:var(--muted)"' : ""}/><text x="${m.l - 6}" y="${sy(v) + 4}" text-anchor="end">${v > 0 ? "+" + v : v}</text>`;
+    s += `</g>`;
+    const every = Math.ceil(B.length / Math.max(1, Math.floor((W - m.l) / 52)));
+    const showVals = bw >= 28;
+    B.forEach((b, i) => {
+      const cx = sx(i + 1), yz = sy(0), yv = sy(b.d), up = b.d >= 0, n = b.w + b.l;
+      if (b.future) s += `<rect x="${m.l + bw * i}" y="${m.t}" width="${bw}" height="${H - m.t - m.b}" fill="var(--surface-2)"/>`;
+      if (n) {
+        s += `<rect x="${cx - barW / 2}" y="${Math.min(yz, yv)}" width="${barW}" height="${Math.max(1.5, Math.abs(yv - yz))}" rx="3" fill="var(${up ? "--win" : "--loss"})" opacity=".85"><title>${R.unit === "day" ? fmtDate(b.k) : "Week of " + fmtDate(b.k)}: ${signed(b.d)} rating, ${b.w}–${b.l}</title></rect>`;
+        if (showVals) s += `<text x="${cx}" y="${up ? yv - 6 : yv + 14}" text-anchor="middle" style="fill:var(--ink);font-weight:600">${signed(b.d)}</text>`;
+      }
+      if ((B.length - 1 - i) % every === 0) s += `<text x="${cx}" y="${H - 22}" text-anchor="middle">${R.tick(b.k)}</text>`;
+      if (n && (showVals || (B.length - 1 - i) % every === 0)) s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" class="num">${b.w}–${b.l}</text>`;
+    });
+    const line = [[0, 0], ...P.live.map((b, i) => [i + 1, b.cum])].map(([x, v], i) => `${i ? "L" : "M"}${sx(x).toFixed(1)},${sy(v).toFixed(1)}`).join(" ");
+    s += `<path d="${line}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>`;
+    const lastLive = P.live.length;
+    s += `<circle cx="${sx(lastLive)}" cy="${sy(P.live[lastLive - 1].cum)}" r="3.5" fill="var(--ink)"><title>Running total: ${signed(P.net)}</title></circle>`;
+    if (T.kind !== "none") s += `<line x1="${sx(T.x0)}" y1="${sy(fit(T.x0))}" x2="${sx(lastLive)}" y2="${sy(fit(lastLive))}" stroke="var(${T.kind === "up" ? "--win" : T.kind === "down" ? "--loss" : "--muted"})" stroke-width="2" stroke-dasharray="6 5"/>`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Rating change per ${R.unit}, running total and trend">${s}</svg>`;
+  }
+
+  const rows = P.buckets.filter(b => b.w + b.l).reverse();
+  $("#periodTable").hidden = !rows.length;
+  $("#periodTable").innerHTML = `<div class="table-scroll"><table class="num"><thead><tr><th>${R.unit === "day" ? "Day" : "Week of"}</th><th class="r">Played</th><th class="r">W–L</th><th class="r hide-sm">Win %</th><th class="r hide-sm">Points ±</th><th class="r">Change</th><th class="r">Rating</th></tr></thead><tbody>${
+    rows.map(b => `<tr><td>${R.unit === "day" ? R.tick(b.k) + " " + fmtDate(b.k) : R.tick(b.k)}</td><td class="r">${b.w + b.l}</td><td class="r">${b.w}–${b.l}</td><td class="r hide-sm">${pct(b.w, b.l)}</td>
+      <td class="r hide-sm">${signed(b.pf - b.pa)}</td><td class="r">${deltaSpan(b.d)}</td><td class="r">${Math.round(b.end)}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
@@ -962,9 +1093,11 @@ $("#playerForm").addEventListener("submit", async e => {
 });
 
 document.addEventListener("click", async e => {
-  const t = e.target.closest("[data-player],[data-goto],[data-edit],[data-leg],[data-rmp],#wlFilter button");
+  const t = e.target.closest("[data-period],[data-shift],[data-player],[data-goto],[data-edit],[data-leg],[data-rmp],#wlFilter button");
   if (!t) return;
-  if (t.dataset.player) go("player/" + t.dataset.player);
+  if (t.dataset.period) { profPeriod = t.dataset.period; profOffset = 0; try { localStorage.setItem("rl-period", profPeriod); } catch (e) {} drawPeriod(profileId); }
+  else if (t.dataset.shift) { profOffset = Math.min(0, profOffset + Number(t.dataset.shift)); drawPeriod(profileId); }
+  else if (t.dataset.player) go("player/" + t.dataset.player);
   else if (t.dataset.goto) go(t.dataset.goto);
   else if (t.dataset.edit) startEdit(t.dataset.edit);
   else if (t.dataset.leg) { hidden.has(t.dataset.leg) ? hidden.delete(t.dataset.leg) : hidden.add(t.dataset.leg); renderCharts(); drawLine(); }
@@ -1040,7 +1173,7 @@ function scheduleReload() { clearTimeout(reloadT); reloadT = setTimeout(reload, 
 
 let resizeT; window.addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(() => {
   if (tab === "charts") { drawLine(); drawWL(); }
-  if (profileId) drawWeekly(profileId);
+  if (profileId) drawPeriod(profileId);
 }, 150); });
 
 // ---------- boot ----------

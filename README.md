@@ -39,7 +39,8 @@ Send the link and the PIN in your team chat. On phones, open the link and use **
 ## Day to day
 - **+ Log match**: pick players, enter the score, Save.
 - **Matches**: every game grouped by week. Unlock, then **Edit** to fix players, score or date, or delete it.
-- **Players**: tap anyone for their profile: rating, streak, week-by-week results, who they beat most, best partners and toughest opponents.
+- **Players**: tap anyone for their profile: rating, streak, who they beat most, best partners and toughest opponents.
+  **Performance** has three views: **Week** (split by day), **Month** and **Lifetime** (split by week). Each shows rating change, record, points and a trend (rising, steady or falling, from the slope of their rating over that period). Use ‹ › to step back through earlier weeks or months.
 - Unlock once per phone with the PIN; it's remembered on that device. **Lock** forgets it.
 - To change the PIN, run `set-pin.sql` again. Everyone re-enters the new one.
 
